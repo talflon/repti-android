@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.serializer
 import java.lang.Math.toIntExact
 import java.time.Clock
 import java.time.Instant
@@ -154,11 +155,11 @@ private class DatasetSurrogate(
  * - `(timestamp)` is the number of seconds since 2021-01-01
  */
 object DatasetSerializer : KSerializer<Dataset> {
-    override val descriptor: SerialDescriptor = DatasetSurrogate.serializer().descriptor
+    override val descriptor: SerialDescriptor = serializer<DatasetSurrogate>().descriptor
 
     override fun serialize(encoder: Encoder, value: Dataset) {
         encoder.encodeSerializableValue(
-            DatasetSurrogate.serializer(),
+            serializer<DatasetSurrogate>(),
             DatasetSurrogate(
                 tasks = value.tasksById.mapValues { (_, t) -> TaskSurrogate.from(t) },
                 updates = value.tasksById.mapValues { (_, t) -> t.timestamps },
@@ -168,7 +169,7 @@ object DatasetSerializer : KSerializer<Dataset> {
     }
 
     override fun deserialize(decoder: Decoder): Dataset {
-        val datasetSurrogate = decoder.decodeSerializableValue(DatasetSurrogate.serializer())
+        val datasetSurrogate = decoder.decodeSerializableValue(serializer<DatasetSurrogate>())
         val dataset = Dataset()
         for ((id, taskSurrogate) in datasetSurrogate.tasks) {
             dataset.tasksById[id] = taskSurrogate.toTask(dataset, datasetSurrogate.updates[id]!!)
