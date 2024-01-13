@@ -1,12 +1,9 @@
 package net.getzit.repti
 
-import kotlinx.serialization.KSerializer
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
-import kotlinx.serialization.serializer
+import kotlinx.serialization.Transient
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.lang.Math.toIntExact
 import java.time.Clock
 import java.time.Instant
@@ -15,119 +12,6 @@ import kotlin.random.Random
 
 /**
  * A set of tasks, with their information and synchronization information.
- */
-@Serializable(with = DatasetSerializer::class)
-class Dataset {
-    internal val tasksById = mutableMapOf<TaskId, Task>()
-    internal val deletedTasks = mutableMapOf<TaskId, Timestamp>()
-
-    /**
-     * [Clock] to be used for update times, defaults to [Clock.systemDefaultZone]
-     */
-    @Transient
-    var clock: Clock = Clock.systemDefaultZone()
-
-    /**
-     * All of the tasks, as an unmutable [Collection].
-     *
-     * The individual [Task] objects can be mutated.
-     */
-    val allTasks: Collection<Task>
-        get() = tasksById.values
-
-    /**
-     * Creates a new, not-done [Task].
-     *
-     * @param name the name to be set
-     */
-    fun newTask(name: String): Task {
-        var id: TaskId
-        do {
-            id = TaskId.random()
-        } while (id in tasksById || id in deletedTasks)
-        val task = Task(id, this)
-        task.name = name
-        tasksById[id] = task
-        return task
-    }
-
-    /**
-     * Deletes a task.
-     *
-     * @param task the [Task] to be deleted, which must belong to this dataset.
-     */
-    internal fun delete(task: Task) {
-        tasksById.remove(task.id).also { assert(it == task) }
-        deletedTasks[task.id] = Timestamp.now(clock)
-    }
-
-    /**
-     * Synchronize this dataset by copying from another.
-     *
-     * Only copies newer changes. When there are competing changes with the same timestamp,
-     * the tiebreaker is arbitrary but consistent.
-     *
-     * @param other the dataset to copy changes from, which will not itself be modified.
-     */
-    fun updateFrom(other: Dataset) {
-        // Check for deletions
-        for ((id, otherDeleted) in other.deletedTasks) {
-            val task = tasksById[id]
-            if (task == null) {
-                // ensure we have the most recent deletion timestamp
-                val ourDeleted = deletedTasks[id]
-                if (ourDeleted == null || ourDeleted < otherDeleted) {
-                    deletedTasks[id] = otherDeleted
-                }
-            } else if (task.lastUpdate <= otherDeleted) { // tie goes to deletion
-                tasksById.remove(id)
-                deletedTasks[id] = otherDeleted
-            }
-        }
-        // Check for new and updated tasks
-        for ((id, otherTask) in other.tasksById) {
-            val ourDeleted = deletedTasks[id]
-            if (ourDeleted == null) {
-                val ourTask = tasksById[id]
-                if (ourTask == null) {
-                    tasksById[id] = otherTask.copy()
-                } else {
-                    ourTask.updateFrom(otherTask)
-                }
-            } else if (otherTask.lastUpdate > ourDeleted) { // tie goes to deletion
-                deletedTasks -= id
-                tasksById[id] = otherTask.copy()
-            }
-        }
-    }
-
-    /**
-     * Creates a deep copy of this.
-     */
-    fun copy(): Dataset {
-        val newCopy = Dataset()
-        newCopy.deletedTasks.putAll(this.deletedTasks)
-        for ((id, task) in this.tasksById) {
-            newCopy.tasksById[id] = task.copy(newCopy)
-        }
-        return newCopy
-    }
-}
-
-@Serializable
-@SerialName("Dataset")
-private class DatasetSurrogate(
-    val tasks: Map<TaskId, TaskSurrogate>,
-    val updates: Map<TaskId, Map<String, Timestamp>>,
-    val deleted: Map<TaskId, Timestamp>
-) {
-    init {
-        require((tasks.keys intersect deleted.keys).isEmpty())
-    }
-}
-
-/**
- * Serializes a [Dataset].
  *
  * The serialization format, expressed in JSON, is:
  *
@@ -150,32 +34,143 @@ private class DatasetSurrogate(
  *    }
  *
  * where
- * - `(task id)` is lower-case alphanumeric of length 7
- * - `(date)` is the number of days since 2021-01-01
- * - `(timestamp)` is the number of seconds since 2021-01-01
+ * - `(task id)` is lower-case alphanumeric of length 7 (see [TaskId])
+ * - `(date)` is the number of days since 2021-01-01 (see [Day])
+ * - `(timestamp)` is the number of seconds since 2021-01-01 (see [Timestamp])
  */
-object DatasetSerializer : KSerializer<Dataset> {
-    override val descriptor: SerialDescriptor = serializer<DatasetSurrogate>().descriptor
+@Serializable
+class Dataset() {
+    internal val tasks = mutableMapOf<TaskId, Task>()
+    internal val updates = mutableMapOf<TaskId, MutableMap<String, Timestamp>>()
+    internal val deleted = mutableMapOf<TaskId, Timestamp>()
 
-    override fun serialize(encoder: Encoder, value: Dataset) {
-        encoder.encodeSerializableValue(
-            serializer<DatasetSurrogate>(),
-            DatasetSurrogate(
-                tasks = value.tasksById.mapValues { (_, t) -> TaskSurrogate.from(t) },
-                updates = value.tasksById.mapValues { (_, t) -> t.timestamps },
-                deleted = value.deletedTasks,
-            )
-        )
+    /**
+     * [Clock] to be used for update times, defaults to [Clock.systemDefaultZone]
+     */
+    @Transient
+    var clock: Clock = Clock.systemDefaultZone()
+
+    /**
+     * All of the tasks, as an immutable [Collection].
+     */
+    val allTasks: Collection<Task>
+        get() = tasks.values
+
+    fun getTask(id: TaskId): Task? = tasks[id]
+
+    /**
+     * Creates a new, not-done [Task].
+     *
+     * @param name the name to be set
+     */
+    fun newTask(name: String): Task {
+        val now = Timestamp.now(clock)
+        var id: TaskId
+        do {
+            id = TaskId.random()
+        } while (id in tasks || id in deleted)
+        val task = Task(id, name, null)
+        tasks[id] = task
+        updates[id] = mutableMapOf("name" to now)
+        return task
     }
 
-    override fun deserialize(decoder: Decoder): Dataset {
-        val datasetSurrogate = decoder.decodeSerializableValue(serializer<DatasetSurrogate>())
-        val dataset = Dataset()
-        for ((id, taskSurrogate) in datasetSurrogate.tasks) {
-            dataset.tasksById[id] = taskSurrogate.toTask(dataset, datasetSurrogate.updates[id]!!)
+    /**
+     * Deletes a task.
+     *
+     * @param taskId the [TaskId] of the task to be deleted
+     */
+    fun delete(taskId: TaskId) {
+        deleted[taskId] = Timestamp.now(clock)
+        tasks -= taskId
+        updates -= taskId
+    }
+
+    /**
+     * Deletes a task.
+     *
+     * @param task the [Task] to be deleted, which must belong to this dataset.
+     */
+    fun delete(task: Task) {
+        delete(task.id)
+    }
+
+    fun update(task: Task) {
+        val now = Timestamp.now(clock)
+        val oldVersion = tasks[task.id]!!
+        val timestamps = this.updates[task.id]!!
+        if (task.name != oldVersion.name) {
+            timestamps["name"] = now
         }
-        dataset.deletedTasks.putAll(datasetSurrogate.deleted)
-        return dataset
+        if (task.done != oldVersion.done) {
+            timestamps["done"] = now
+        }
+        tasks[task.id] = task
+    }
+
+    /**
+     * Creates a copy of this, except `clock` is set to the default.
+     */
+    fun copy() = Dataset().also {
+        it.tasks.putAll(this.tasks)
+        it.updates.putAll(this.updates.mapValues { it.value.toMutableMap() })
+        it.deleted.putAll(this.deleted)
+    }
+
+    fun lastUpdate(id: TaskId): Timestamp = updates[id]!!.values.max()
+
+    /**
+     * Synchronize this dataset by copying from another.
+     *
+     * Only copies newer changes. When there are competing changes with the same timestamp,
+     * the tiebreaker is arbitrary but consistent.
+     *
+     * @param other the dataset to copy changes from, which will not itself be modified.
+     */
+    fun updateFrom(other: Dataset) {
+        // Check for deletions
+        for ((id, otherDeleted) in other.deleted) {
+            val task = this.tasks[id]
+            if (task == null) {
+                // ensure we have the most recent deletion timestamp
+                val ourDeleted = this.deleted[id]
+                if (ourDeleted == null || ourDeleted < otherDeleted) {
+                    this.deleted[id] = otherDeleted
+                }
+            } else if (this.lastUpdate(id) <= otherDeleted) { // tie goes to deletion
+                this.tasks -= id
+                this.updates -= id
+                this.deleted[id] = otherDeleted
+            }
+        }
+        // Check for new and updated tasks
+        for ((id, otherTask) in other.tasks) {
+            val ourDeleted = this.deleted[id]
+            if (ourDeleted == null) {
+                val ourTask = this.tasks[id]
+                if (ourTask == null) {
+                    this.tasks[id] = otherTask.copy()
+                    this.updates[id] = other.updates[id]!!.toMutableMap()
+                } else { // task exists in both; update individual fields
+                    val updatedTask = ourTask.updateFrom(
+                        otherTask,
+                        ourUpdates = this.updates[id]!!,
+                        otherUpdates = other.updates[id]!!
+                    )
+                    if (updatedTask != ourTask) {
+                        this.tasks[id] = updatedTask
+                    }
+                }
+            } else if (other.lastUpdate(id) > ourDeleted) { // tie goes to deletion
+                this.deleted -= id
+                this.tasks[id] = otherTask.copy()
+                this.updates[id] = other.updates[id]!!.toMutableMap()
+            }
+        }
+    }
+
+    override fun toString(): String {
+        return Json.encodeToString(this)
     }
 }
 
@@ -187,12 +182,18 @@ object DatasetSerializer : KSerializer<Dataset> {
 value class TaskId(val string: String) {
     companion object {
         const val ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz"
+        const val ALPHABET_LENGTH = ALPHABET.length
         const val LENGTH = 7
+        private const val NUM_IDS = 78364164096L  // = 36 raised to 7th power
 
-        fun random(r: Random = Random.Default) = TaskId(
+        fun random(r: Random = Random.Default): TaskId = fromLong(r.nextLong(NUM_IDS))
+
+        fun fromLong(long: Long) = TaskId(
             buildString(LENGTH) {
-                for (i in 1..LENGTH) {
-                    append(ALPHABET[r.nextInt(ALPHABET.length)])
+                var i = long
+                while (length < LENGTH) {
+                    append(ALPHABET[i.mod(ALPHABET_LENGTH)])
+                    i /= ALPHABET_LENGTH
                 }
             })
     }
@@ -212,7 +213,7 @@ value class Timestamp internal constructor(private val epochSecs: Int) : Compara
         /**
          * 2021-01-01, in seconds since the regular epoch (1970-01-01)
          */
-        const val EPOCH: Long = 1609459200
+        const val EPOCH: Long = Day.EPOCH * 86400L
 
         fun now(clock: Clock = Clock.systemDefaultZone()) = of(Instant.now(clock))
 
@@ -242,117 +243,66 @@ value class Day internal constructor(private val epochDays: Int) : Comparable<Da
     }
 }
 
-@Serializable
-@SerialName("Task")
-private class TaskSurrogate(val id: TaskId, val name: String, val done: Day?) {
-    fun toTask(dataset: Dataset, timestamps: Map<String, Timestamp>) = Task(id, dataset).also {
-        it._name = name
-        it._done = done
-        it.timestamps.putAll(timestamps)
-    }
-
-    companion object {
-        fun from(task: Task) = TaskSurrogate(
-            id = task.id,
-            name = task.name,
-            done = task.done,
-        )
-    }
-}
-
 /**
- * A task that can be completed, inside a [Dataset].
+ * Represents a task that can be completed.
  *
- * @property id the task's [TaskId]
- * @property dataset the [Dataset]
+ * @property id the task's [TaskId], to look it up in a [Dataset]
  * @property name the task's name
  * @property done the [Day] in which the task was done, or [null] if not yet done
  */
-class Task internal constructor(val id: TaskId, val dataset: Dataset) {
-    internal var _name: String = ""
-    var name: String
-        get() = _name
-        set(value) {
-            _name = value
-            timestamps["name"] = now()
-        }
-
-    internal var _done: Day? = null
-    var done: Day?
-        get() = _done
-        set(value) {
-            _done = value
-            timestamps["done"] = now()
-        }
-
+@Serializable
+data class Task(val id: TaskId, val name: String, val done: Day?) {
     /**
-     * Update timestamps for each property
+     * Update this task with newer updates from `other`, returning the result.
+     *
+     * @param other the [Task] to take updates from
+     * @param ourUpdates timestamps for our updates, to be modified with new updates
+     * @param otherUpdates timestamps for `other`'s updates (won't be changed)
      */
-    internal val timestamps = mutableMapOf<String, Timestamp>()
-
-    /**
-     * The most recent update timestamp
-     */
-    val lastUpdate: Timestamp get() = timestamps.values.maxOrNull()!!
-
-    /**
-     * Set [done] to today.
-     */
-    fun doit() {
-        done = Day.today(dataset.clock)
-    }
-
-    /**
-     * Delete this task from its dataset.
-     */
-    fun delete() {
-        dataset.delete(this)
-    }
-
-    private inline fun now() = Timestamp.now(dataset.clock)
+    internal fun updateFrom(
+        other: Task,
+        ourUpdates: MutableMap<String, Timestamp>,
+        otherUpdates: Map<String, Timestamp>,
+    ) = copy(
+        name = ifHasNewerUpdate("name", other, ourUpdates, otherUpdates) { it.name },
+        done = ifHasNewerUpdate("done", other, ourUpdates, otherUpdates) { it.done },
+    )
 
     /**
      * Helper function for [updateFrom].
      *
-     * If the update timestamp for `key` in `other` is newer than ours, run `setIt()` to use theirs.
-     * If they're the same, check `tiebreaker()`. If `tiebreaker()` returns `true`, then we use theirs.
+     * If the update timestamp for `key` in `other` is newer than ours, returns their value.
+     * Otherwise, returns our value.
+     * If the timestamps are the same, we use the greater non-null value, as a tiebreaker.
+     * If their value is returned, updates `ourUpdates` with their update timestamp.
      */
-    private inline fun ifHasNewerUpdate(
-        other: Task,
+    private inline fun <NT, T : Comparable<NT>?> ifHasNewerUpdate(
         key: String,
-        tiebreaker: () -> Boolean,
-        setIt: () -> Unit,
-    ) {
-        other.timestamps[key]?.let { otherTimestamp ->
-            val ourTimestamp = timestamps[key]
+        other: Task,
+        ourUpdates: MutableMap<String, Timestamp>,
+        otherUpdates: Map<String, Timestamp>,
+        getter: (Task) -> T,
+    ): T {
+        val otherTimestamp = otherUpdates[key]
+        return if (otherTimestamp == null) {
+            getter(this)
+        } else {
+            val ourTimestamp = ourUpdates[key]
             if (ourTimestamp == null || ourTimestamp < otherTimestamp) {
-                setIt()
-                timestamps[key] = otherTimestamp
-            } else if (ourTimestamp == otherTimestamp && tiebreaker()) {
-                setIt()
+                ourUpdates[key] = otherTimestamp
+                getter(other)
+            } else if (ourTimestamp == otherTimestamp) { // tiebreaker
+                val ourValue = getter(this)
+                val otherValue = getter(other)
+                if (compareValues(otherValue, ourValue) > 0) {
+                    ourUpdates[key] = otherTimestamp
+                    otherValue
+                } else {
+                    ourValue
+                }
+            } else {
+                getter(this)
             }
         }
-    }
-
-    /**
-     * Update this task with newer updates from `other`.
-     */
-    internal fun updateFrom(other: Task) {
-        // tie goes to lower id; these are random so this is arbitrary, just to be consistent
-        ifHasNewerUpdate(other, "name", { other._name > _name }) { _name = other._name }
-        // tie goes to later done, with null counting as the earliest
-        ifHasNewerUpdate(other, "done", { compareValues(other._done, _done) > 0 }) {
-            _done = other._done
-        }
-    }
-
-    /**
-     * Deep copy, optionally changing the [Dataset].
-     */
-    internal fun copy(dataset: Dataset = this.dataset) = Task(id, dataset).also {
-        it._name = this._name
-        it._done = this._done
-        it.timestamps.clear()
-        it.timestamps.putAll(this.timestamps)
     }
 }

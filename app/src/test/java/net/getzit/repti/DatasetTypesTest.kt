@@ -1,0 +1,84 @@
+package net.getzit.repti
+
+import io.kotest.common.runBlocking
+import io.kotest.property.Arb
+import io.kotest.property.arbitrary.localDate
+import io.kotest.property.arbitrary.localDateTime
+import io.kotest.property.arbitrary.map
+import io.kotest.property.checkAll
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.time.LocalDate
+import java.time.ZoneOffset
+import kotlin.random.Random
+
+class DatasetTypesTest {
+    private val localDateArb = Arb.localDate(LocalDate.of(2020, 1, 1), LocalDate.of(2050, 1, 1))
+
+    private val ldtArb = Arb.localDateTime(2020, 2050)
+
+    private val instantArb = ldtArb.map { it.toInstant(ZoneOffset.UTC) }
+
+    @Test
+    fun testTimestampOfAsInstant() {
+        runBlocking {
+            checkAll<Timestamp> { t ->
+                assertEquals(t, Timestamp.of(t.asInstant))
+            }
+        }
+    }
+
+    @Test
+    fun testInstantToTimestamp() {
+        runBlocking {
+            checkAll(instantArb) { instant ->
+                assertEquals(instant, Timestamp.of(instant).asInstant)
+            }
+        }
+    }
+
+    @Test
+    fun testDayOfDate() {
+        runBlocking {
+            checkAll<Day> { day ->
+                assertEquals(day, Day.of(day.date))
+            }
+        }
+    }
+
+    @Test
+    fun testDateToDay() {
+        runBlocking {
+            checkAll(localDateArb) { date ->
+                assertEquals(date, Day.of(date).date)
+            }
+        }
+    }
+
+    @Test
+    fun testTaskIdSerializeEquals() {
+        runBlocking {
+            checkAll<TaskId> { id ->
+                assertEquals(id, Json.decodeFromString<TaskId>(Json.encodeToString(id)))
+            }
+        }
+    }
+
+    @Test
+    fun testTaskIdRandom() {
+        val random = Random(0x1234567890baabaaL)
+        val ids = mutableSetOf<TaskId>()
+        val numIds = 2000
+        for (iRun in 1..10_000) {
+            ids.clear()
+            for (iId in 1..numIds) {
+                ids.add(TaskId.random(random))
+            }
+            // check that there were no more than 2 collisions
+            assertTrue(ids.size > numIds - 2)
+        }
+    }
+}

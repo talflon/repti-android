@@ -90,10 +90,14 @@ class TaskPreviewParameterProvider : PreviewParameterProvider<Task> {
             val dataset = Dataset()
             return sequenceOf(
                 dataset.newTask("short task"),
-                dataset.newTask("a much, much longer task")
-                    .apply { done = Day.of(LocalDate.now().minusDays(12)) },
-                dataset.newTask("task done today")
-                    .apply { done = Day.today() },
+                dataset.newTask("a much, much longer task").let {
+                    it.copy(done = Day.of(LocalDate.now().minusDays(12)))
+                        .also { dataset.update(it) }
+                },
+                dataset.newTask("task done today").let {
+                    it.copy(done = Day.today())
+                        .also { dataset.update(it) }
+                },
             )
         }
 }
