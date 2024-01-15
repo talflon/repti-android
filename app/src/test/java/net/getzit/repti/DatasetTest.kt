@@ -35,6 +35,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
+import java.time.temporal.TemporalAmount
 import kotlin.random.Random
 
 class DatasetTest {
@@ -147,6 +148,22 @@ class DatasetTest {
         override fun instant() = instant
         override fun withZone(newZoneId: ZoneId?): Clock = MockClock(instant, newZoneId!!)
         override fun getZone(): ZoneId = zoneId
+
+        fun tick(seconds: Long = 1) {
+            instant += Duration.ofSeconds(seconds)
+        }
+
+        fun tick(temporalAmount: TemporalAmount) {
+            instant += temporalAmount
+        }
+
+        companion object {
+            fun of(baseTime: LocalDateTime) = MockClock(baseTime.toInstant(ZoneOffset.UTC))
+
+            fun ofEpochSeconds(baseTime: Long) = MockClock(Instant.ofEpochSecond(baseTime))
+
+            fun default(): MockClock = ofEpochSeconds(1700000000L)
+        }
     }
 
     /**
@@ -290,28 +307,15 @@ class DatasetTest {
         }
     }
 
-    class Clockmaker(val baseTime: Instant) {
-        fun atSeconds(seconds: Long): Clock = Clock.fixed(
-            baseTime.plusSeconds(seconds),
-            ZoneOffset.UTC
-        )
-
-        companion object {
-            fun of(baseTime: LocalDateTime) = Clockmaker(baseTime.toInstant(ZoneOffset.UTC))
-
-            fun ofEpochSeconds(baseTime: Long) = Clockmaker(Instant.ofEpochSecond(baseTime))
-
-            val DEFAULT = ofEpochSeconds(1700000000L)
-        }
-    }
-
     @Test
     fun testRenameTaskTimestamp() {
         val dataset = Dataset()
-        val clockmaker = Clockmaker.DEFAULT
-        val task = dataset.withClock(clockmaker.atSeconds(0)) { it.newTask("test") }
+        val clock = MockClock.default()
+        dataset.clock = clock
+        val task = dataset.newTask("test")
         val oldTimestamp = dataset.updates[task.id]!!["name"]!!
-        dataset.withClock(clockmaker.atSeconds(4857)) { it.update(task.copy(name = "different")) }
+        clock.tick(4857)
+        dataset.update(task.copy(name = "different"))
         dataset.checkValid()
         val newTimestamp = dataset.updates[task.id]!!["name"]!!
         assertNotEquals(oldTimestamp, newTimestamp)
@@ -377,7 +381,7 @@ class DatasetTest {
                 for (i in 0..1) {
                     datasets[i].clock = clocks[i]
                     for (mod in mods[i]) {
-                        clocks[i].instant += mod.timeInc
+                        clocks[i].tick(mod.timeInc)
                         mod.run(datasets[i])
                         datasets[i].checkValid()
                     }
@@ -389,23 +393,29 @@ class DatasetTest {
 
     @Test
     fun testUpdateFromCommutativeSimple() {
-        val clockmaker = Clockmaker.DEFAULT
+        val clock = MockClock.default()
         val d1 = Dataset()
-        val task1 = d1.withClock(clockmaker.atSeconds(1)) { it.newTask("one") }
-        println("task1.id = ${task1.id}")
+        d1.clock = clock
+        clock.tick()
+        val task1 = d1.newTask("one")
         val d2 = d1.copy()
-        val task2 = d2.withClock(clockmaker.atSeconds(2)) { it.newTask("two") }
-        println("task2.id = ${task2.id}")
+        d2.clock = clock
+        clock.tick()
+        val task2 = d2.newTask("two")
         assertUpdateFromCommutative(d1, d2)
-        d1.withClock(clockmaker.atSeconds(3)) { it.update(task1.copy(name = "one!")) }
+        clock.tick()
+        d1.update(task1.copy(name = "one!"))
         assertUpdateFromCommutative(d1, d2)
-        d2.withClock(clockmaker.atSeconds(4)) { it.update(task1.copy(name = "one?")) }
+        clock.tick()
+        d2.update(task1.copy(name = "one?"))
         assertUpdateFromCommutative(d1, d2)
-        d1.withClock(clockmaker.atSeconds(4)) { it.update(task1.copy(name = "one!?")) }
+        d1.update(task1.copy(name = "one!?"))
         assertUpdateFromCommutative(d1, d2)
-        d2.withClock(clockmaker.atSeconds(5)) { it.delete(task1.id) }
+        clock.tick()
+        d2.delete(task1.id)
         assertUpdateFromCommutative(d1, d2)
-        d2.withClock(clockmaker.atSeconds(6)) { it.delete(task2.id) }
+        clock.tick()
+        d2.delete(task2.id)
     }
 
     @Test
