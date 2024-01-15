@@ -9,6 +9,7 @@ import io.kotest.property.checkAll
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
@@ -75,10 +76,20 @@ class DatasetTypesTest {
         for (iRun in 1..10_000) {
             ids.clear()
             for (iId in 1..numIds) {
-                ids.add(TaskId.random(random))
+                ids.add(TaskId.random(random).also { assertTrue(it.valid) })
             }
             // check that there were no more than 2 collisions
             assertTrue(ids.size > numIds - 2)
         }
+    }
+
+    @Test
+    fun testInvalidTaskIds() {
+        assertFalse(TaskId("").valid)
+        assertFalse(TaskId("a").valid)
+        assertFalse(TaskId("0").valid)
+        assertFalse(TaskId("muchmuchtoolong").valid)
+        assertFalse(TaskId("123456é").valid)
+        assertFalse(TaskId("A234567").valid)
     }
 }

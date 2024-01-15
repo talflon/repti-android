@@ -172,6 +172,22 @@ class Dataset() {
     override fun toString(): String {
         return Json.encodeToString(this)
     }
+
+    internal fun checkValid() {
+        check(tasks.size == updates.size)
+        for (id in deleted.keys) {
+            check(id.valid)
+            check(id !in tasks)
+            check(id !in updates)
+        }
+        for ((id, task) in tasks) {
+            check(id.valid)
+            check(id == task.id)
+            val updates = this.updates[id]
+            check(updates != null)
+            check("name" in updates)
+        }
+    }
 }
 
 /**
@@ -197,6 +213,9 @@ value class TaskId(val string: String) {
                 }
             })
     }
+
+    val valid: Boolean
+        get() = string.length == LENGTH && string.all { it in ALPHABET }
 }
 
 /**

@@ -243,6 +243,7 @@ class DatasetTest {
         runBlocking {
             checkAll(datasetArb(Arb.string())) { dataset ->
                 val task = dataset.newTask("test")
+                dataset.checkValid()
                 assertTrue(task.name == "test")
                 assertNull(task.done)
                 assertTrue(dataset.allTasks.contains(task))
@@ -257,6 +258,7 @@ class DatasetTest {
                 val task = dataset.newTask("test")
                 val datasetCopy = dataset.copy()
                 dataset.delete(task)
+                dataset.checkValid()
                 assertFalse(dataset.allTasks.contains(task))
                 assertTrue(datasetCopy.allTasks.contains(task))
             }
@@ -268,6 +270,7 @@ class DatasetTest {
         runBlocking {
             checkAll(datasetArb(Arb.string())) { dataset ->
                 val copy = dataset.copy()
+                copy.checkValid()
                 assertDatasetsEqual(dataset, copy)
             }
         }
@@ -280,6 +283,7 @@ class DatasetTest {
                 val task = dataset.newTask("before $newName")
                 val datasetCopy = dataset.copy()
                 dataset.update(task.copy(name = newName))
+                dataset.checkValid()
                 assertDatasetsNotEqual(dataset, datasetCopy)
                 assertEquals(newName, datasetSerCopy(dataset).getTask(task.id)?.name)
             }
@@ -308,6 +312,7 @@ class DatasetTest {
         val task = dataset.withClock(clockmaker.atSeconds(0)) { it.newTask("test") }
         val oldTimestamp = dataset.updates[task.id]!!["name"]!!
         dataset.withClock(clockmaker.atSeconds(4857)) { it.update(task.copy(name = "different")) }
+        dataset.checkValid()
         val newTimestamp = dataset.updates[task.id]!!["name"]!!
         assertNotEquals(oldTimestamp, newTimestamp)
     }
@@ -323,8 +328,10 @@ class DatasetTest {
                 assume(day1 != day2)
                 val task = dataset.newTask("any name")
                 dataset.update(task.copy(done = day1))
+                dataset.checkValid()
                 val datasetCopy = dataset.copy()
                 dataset.update(task.copy(done = day2))
+                dataset.checkValid()
                 assertDatasetsNotEqual(dataset, datasetCopy)
                 assertEquals(day2, datasetSerCopy(dataset).getTask(task.id)!!.done)
             }
@@ -333,8 +340,8 @@ class DatasetTest {
 
     private fun assertUpdateFromCommutative(dataset1: Dataset, dataset2: Dataset) {
         assertDatasetsEqual(
-            dataset1.copy().also { it.updateFrom(dataset2) },
-            dataset2.copy().also { it.updateFrom(dataset1) })
+            dataset1.copy().also { it.updateFrom(dataset2); it.checkValid() },
+            dataset2.copy().also { it.updateFrom(dataset1); it.checkValid() })
     }
 
     @Test
@@ -372,6 +379,7 @@ class DatasetTest {
                     for (mod in mods[i]) {
                         clocks[i].instant += mod.timeInc
                         mod.run(datasets[i])
+                        datasets[i].checkValid()
                     }
                 }
                 assertUpdateFromCommutative(dataset1, dataset2)
@@ -408,6 +416,7 @@ class DatasetTest {
                 d1.clock = Clock.fixed(datasetTimeOrDefault(d1) + mod.timeInc, ZoneOffset.UTC)
                 mod.run(d1)
                 d2.updateFrom(d1)
+                d2.checkValid()
                 assertDatasetsEqual(d1, d2)
             }
         }
@@ -424,7 +433,9 @@ class DatasetTest {
                     now += mod.timeInc
                     d1.clock = Clock.fixed(now, ZoneOffset.UTC)
                     mod.run(d1)
+                    d1.checkValid()
                     d2.updateFrom(d1)
+                    d2.checkValid()
                     assertDatasetsEqual(d1, d2)
                 }
             }
