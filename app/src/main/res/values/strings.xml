@@ -1,4 +1,10 @@
 <resources>
     <string name="app_name">Repti</string>
     <string name="title_activity_main">Repti</string>
+    <string name="path_dataset_file">data.json</string>
+    <string name="cmd_mark_task_done">Mark task done</string>
+    <string name="cmd_create_new_task">Create new task</string>
+    <string name="lbl_name">Name</string>
+    <string name="cmd_cancel">Cancel</string>
+    <string name="cmd_create">Create</string>
 </resources>
