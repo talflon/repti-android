@@ -235,14 +235,6 @@ class DatasetTest {
         }
     }
 
-    private fun assertDatasetsEqual(d1: Dataset, d2: Dataset) {
-        JSONAssert.assertEquals(Json.encodeToString(d1), Json.encodeToString(d2), false)
-    }
-
-    private fun assertDatasetsNotEqual(d1: Dataset, d2: Dataset) {
-        JSONAssert.assertNotEquals(Json.encodeToString(d1), Json.encodeToString(d2), false)
-    }
-
     private fun datasetSerCopy(d: Dataset): Dataset =
         Json.decodeFromJsonElement(Json.encodeToJsonElement(d))
 
@@ -451,4 +443,12 @@ class DatasetTest {
             }
         }
     }
+}
+
+fun assertDatasetsEqual(d1: Dataset, d2: Dataset) {
+    JSONAssert.assertEquals(Json.encodeToString(d1), Json.encodeToString(d2), false)
+}
+
+fun assertDatasetsNotEqual(d1: Dataset, d2: Dataset) {
+    JSONAssert.assertNotEquals(Json.encodeToString(d1), Json.encodeToString(d2), false)
 }

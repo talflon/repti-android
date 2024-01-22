@@ -17,7 +17,7 @@ import java.io.File
 import java.io.FileNotFoundException
 
 class TaskRepository(
-    private val localSource: DatasetJsonStorage,
+    private val localSource: Storage<Dataset>,
     private val externalScope: CoroutineScope
 ) {
     private val datasetMutex = Mutex()
