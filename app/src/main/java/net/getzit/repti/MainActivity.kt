@@ -28,6 +28,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +37,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -84,18 +87,18 @@ fun MainUI(@PreviewParameter(TaskListPreviewParameterProvider::class) tasks: Lis
             }
         ) { innerPadding ->
             TaskList(tasks, modifier = Modifier.padding(innerPadding))
+        }
 
-            if (openNewTaskDialog.value) {
-                NewTaskDialog(
-                    onDismissRequest = { openNewTaskDialog.value = false },
-                    onConfirmRequest = { name ->
-                        scope.launch {
-                            TaskRepository.instance.newTask(name)
-                        }
-                        openNewTaskDialog.value = false
-                    },
-                )
-            }
+        if (openNewTaskDialog.value) {
+            NewTaskDialog(
+                onDismissRequest = { openNewTaskDialog.value = false },
+                onConfirmRequest = { name ->
+                    scope.launch {
+                        TaskRepository.instance.newTask(name)
+                    }
+                    openNewTaskDialog.value = false
+                },
+            )
         }
     } else {
         LoadingScreen()
@@ -164,6 +167,7 @@ fun TaskListItem(@PreviewParameter(TaskPreviewParameterProvider::class) task: Ta
 @Composable
 fun NewTaskDialog(onDismissRequest: () -> Unit, onConfirmRequest: (String) -> Unit) {
     var newTaskName by remember { mutableStateOf("") }
+    val textFocusRequester = remember { FocusRequester() }
 
     Dialog(onDismissRequest = onDismissRequest) {
         Card(
@@ -180,6 +184,7 @@ fun NewTaskDialog(onDismissRequest: () -> Unit, onConfirmRequest: (String) -> Un
                 )
                 OutlinedTextField(
                     value = newTaskName,
+                    modifier = Modifier.focusRequester(textFocusRequester),
                     onValueChange = { newTaskName = it },
                     label = { Text(stringResource(R.string.lbl_name)) })
                 Row(
@@ -198,6 +203,8 @@ fun NewTaskDialog(onDismissRequest: () -> Unit, onConfirmRequest: (String) -> Un
                 }
             }
         }
+
+        LaunchedEffect(Unit) { textFocusRequester.requestFocus() }
     }
 }
 
