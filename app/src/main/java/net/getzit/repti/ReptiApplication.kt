@@ -5,6 +5,6 @@ import android.app.Application
 class ReptiApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        TaskRepository.init(applicationContext)
+        TaskRepository.instance = TaskRepository.create(applicationContext)
     }
 }

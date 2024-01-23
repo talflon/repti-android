@@ -81,18 +81,21 @@ class TaskRepository(
     companion object {
         lateinit var instance: TaskRepository
 
-        fun create(context: Context, scope: CoroutineScope = CoroutineScope(SupervisorJob())) =
+        fun create(
+            context: Context,
+            scope: CoroutineScope = CoroutineScope(SupervisorJob()),
+            ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+        ) =
             TaskRepository(
                 localSource = DatasetJsonStorage(
                     LocalFileStorage.forPath(
-                        context.getString(R.string.path_dataset_file),
-                        context
+                        path = context.getString(R.string.path_dataset_file),
+                        context = context,
+                        ioDispatcher = ioDispatcher,
                     )
                 ),
                 externalScope = scope,
             )
-
-        fun init(context: Context): TaskRepository = create(context).also { instance = it }
     }
 }
 
@@ -118,7 +121,7 @@ class DatasetJsonStorage(private val stringStorage: Storage<String>) : Storage<D
 
 class LocalFileStorage(
     val file: File,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val ioDispatcher: CoroutineDispatcher,
 ) : Storage<String> {
     private val mutex = Mutex()
 
@@ -142,7 +145,7 @@ class LocalFileStorage(
         fun forPath(
             path: String,
             context: Context,
-            ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+            ioDispatcher: CoroutineDispatcher
         ) = LocalFileStorage(File(context.filesDir, path), ioDispatcher)
     }
 }
