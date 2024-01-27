@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Repti"
 include(":app")
+include(":shared-test")
