@@ -256,6 +256,12 @@ value class Day internal constructor(private val epochDays: Int) : Comparable<Da
 
     override fun compareTo(other: Day) = epochDays.compareTo(other.epochDays)
 
+    fun plusDays(days: Int) = Day(epochDays + days)
+
+    fun minusDays(days: Int) = Day(epochDays - days)
+
+    fun daysAfter(day: Day): Int = this.epochDays - day.epochDays
+
     companion object {
         /**
          * 2021-01-01, in days since the regular epoch (1970-01-01)

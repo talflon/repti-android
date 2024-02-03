@@ -50,7 +50,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.temporal.ChronoUnit.DAYS
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -131,7 +130,7 @@ fun formatDone(day: Day?): String =
     if (day == null) {
         "—"
     } else {
-        DAYS.between(day.date, LocalDate.now()).toString()
+        Day.today().daysAfter(day).toString()
     }
 
 @Preview(widthDp = 300)

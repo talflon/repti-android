@@ -2,6 +2,7 @@ package net.getzit.repti
 
 import io.kotest.common.runBlocking
 import io.kotest.property.Arb
+import io.kotest.property.arbitrary.int
 import io.kotest.property.arbitrary.localDate
 import io.kotest.property.arbitrary.localDateTime
 import io.kotest.property.arbitrary.map
@@ -56,6 +57,20 @@ class DatasetTypesTest {
             checkAll(localDateArb) { date ->
                 assertEquals(date, Day.of(date).date)
             }
+        }
+    }
+
+    @Test
+    fun testDatePlusAfter(): Unit = runBlocking {
+        checkAll(localDateArb.map(Day::of), Arb.int(-10_000, 10_000)) { day, delta ->
+            assertEquals(delta, day.plusDays(delta).daysAfter(day))
+        }
+    }
+
+    @Test
+    fun testDateMinusAfter(): Unit = runBlocking {
+        checkAll(localDateArb.map(Day::of), Arb.int(-10_000, 10_000)) { day, delta ->
+            assertEquals(delta, day.daysAfter(day.minusDays(delta)))
         }
     }
 
