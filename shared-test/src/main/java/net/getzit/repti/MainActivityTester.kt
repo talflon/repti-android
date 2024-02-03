@@ -2,11 +2,14 @@ package net.getzit.repti
 
 import android.content.Context
 import androidx.annotation.StringRes
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasAnyChild
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescriptionExactly
 import androidx.compose.ui.test.hasTextExactly
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isFocused
+import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -77,5 +80,89 @@ abstract class MainActivityTester {
         inActivity {
             composeRule.onNodeWithText(taskName).assertExists()
         }
+    }
+
+    private fun selectTaskByName(taskName: String) {
+        with(composeRule) {
+            onNode(
+                isSelectable() and hasAnyChild(hasTextExactly(taskName)),
+                useUnmergedTree = true
+            ).let {
+                it.performClick()
+                it.assertIsSelected()
+            }
+        }
+    }
+
+    @Test
+    fun testClearDayDone() {
+        val taskName = "my task"
+        val taskId = runBlocking {
+            with(TaskRepository.instance) {
+                val task = newTask(taskName)
+                update(task.copy(done = Day.today()))
+                task.id
+            }
+        }
+        inActivity {
+            selectTaskByName(taskName)
+            with(composeRule) {
+                onNode(hasContentDescriptionExactly(getString(R.string.cmd_clear_day_done))).let {
+                    it.assertExists()
+                    it.performClick()
+                }
+            }
+        }
+        assertEquals(null, runBlocking { TaskRepository.instance.getTask(taskId)!!.done })
+    }
+
+    @Test
+    fun testIncDayDone() {
+        val taskName = "task goes up"
+        val origDone = Day.today().minusDays(100)
+        val taskId = runBlocking {
+            with(TaskRepository.instance) {
+                val task = newTask(taskName)
+                update(task.copy(done = origDone))
+                task.id
+            }
+        }
+        inActivity {
+            selectTaskByName(taskName)
+            with(composeRule) {
+                onNode(hasContentDescriptionExactly(getString(R.string.cmd_done_next_day))).let {
+                    it.assertExists()
+                    it.performClick()
+                }
+            }
+        }
+        assertEquals(
+            origDone.plusDays(1) as Day?,
+            runBlocking { TaskRepository.instance.getTask(taskId)!!.done })
+    }
+
+    @Test
+    fun testDecDayDone() {
+        val taskName = "task goes down"
+        val origDone = Day.today().minusDays(100)
+        val taskId = runBlocking {
+            with(TaskRepository.instance) {
+                val task = newTask(taskName)
+                update(task.copy(done = origDone))
+                task.id
+            }
+        }
+        inActivity {
+            selectTaskByName(taskName)
+            with(composeRule) {
+                onNode(hasContentDescriptionExactly(getString(R.string.cmd_done_previous_day))).let {
+                    it.assertExists()
+                    it.performClick()
+                }
+            }
+        }
+        assertEquals(
+            origDone.minusDays(1) as Day?,
+            runBlocking { TaskRepository.instance.getTask(taskId)!!.done })
     }
 }

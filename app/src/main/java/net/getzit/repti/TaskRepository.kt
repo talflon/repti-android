@@ -80,6 +80,8 @@ class TaskRepository(
         modifyDataset { it.update(task) }
     }
 
+    suspend fun getTask(id: TaskId) = withDataset { it.getTask(id) }
+
     companion object {
         lateinit var instance: TaskRepository
 

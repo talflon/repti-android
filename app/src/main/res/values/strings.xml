@@ -7,4 +7,11 @@
     <string name="lbl_name">Name</string>
     <string name="cmd_cancel">Cancel</string>
     <string name="cmd_create">Create</string>
+    <string name="lbl_not_done">not done</string>
+    <string name="cmd_done_next_day">Done next day</string>
+    <string name="cmd_done_previous_day">Done previous day</string>
+    <string name="cmd_clear_day_done">Clear day done</string>
+    <string name="lbl_today">today</string>
+    <string name="lbl_yesterday">yesterday</string>
+    <string name="lbl_days_ago">%1$s days ago</string>
 </resources>
