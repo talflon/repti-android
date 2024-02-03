@@ -39,7 +39,7 @@ import kotlin.random.Random
  * - `(timestamp)` is the number of seconds since 2021-01-01 (see [Timestamp])
  */
 @Serializable
-class Dataset() {
+class Dataset {
     internal val tasks = mutableMapOf<TaskId, Task>()
     internal val updates = mutableMapOf<TaskId, MutableMap<String, Timestamp>>()
     internal val deleted = mutableMapOf<TaskId, Timestamp>()
@@ -167,6 +167,12 @@ class Dataset() {
                 this.updates[id] = other.updates[id]!!.toMutableMap()
             }
         }
+    }
+
+    fun clear() {
+        this.tasks.clear()
+        this.updates.clear()
+        this.deleted.clear()
     }
 
     override fun toString(): String {

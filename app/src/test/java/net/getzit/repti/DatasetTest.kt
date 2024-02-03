@@ -443,6 +443,15 @@ class DatasetTest {
             }
         }
     }
+
+    @Test
+    fun testClear(): Unit = runBlocking {
+        checkAll(datasetArb(Arb.string())) {
+            it.clear()
+            it.checkValid()
+            assertTrue(it.allTasks.isEmpty())
+        }
+    }
 }
 
 fun assertDatasetsEqual(d1: Dataset, d2: Dataset) {
