@@ -45,6 +45,8 @@ class TaskRepository(
             }
         }
 
+    suspend fun <T> editDataset(run: suspend (Dataset) -> T): T = modifyDataset(run)
+
     suspend fun ensureLoaded() {
         withDataset { }
     }
