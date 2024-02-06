@@ -2,6 +2,9 @@ package net.getzit.repti
 
 import android.content.Context
 import androidx.annotation.StringRes
+import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assertAny
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyChild
 import androidx.compose.ui.test.hasClickAction
@@ -11,6 +14,7 @@ import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -82,15 +86,82 @@ abstract class MainActivityTester {
         }
     }
 
+    private fun getTaskItemByName(taskName: String): SemanticsNodeInteraction = composeRule.onNode(
+        isSelectable() and hasAnyChild(hasTextExactly(taskName)),
+        useUnmergedTree = true
+    )
+
     private fun selectTaskByName(taskName: String) {
+        getTaskItemByName(taskName).let {
+            it.performClick()
+            it.assertIsSelected()
+        }
+    }
+
+    private fun assertDetailsCardVisible(taskName: String) {
         with(composeRule) {
-            onNode(
-                isSelectable() and hasAnyChild(hasTextExactly(taskName)),
-                useUnmergedTree = true
-            ).let {
-                it.performClick()
-                it.assertIsSelected()
+            onNode(hasContentDescriptionExactly(getString(R.string.lbl_more_information_for_task))).let {
+                it.assertIsDisplayed()
+                it.onChildren().assertAny(hasTextExactly(taskName))
             }
+        }
+    }
+
+    private fun assertNoDetailsCardVisible() {
+        with(composeRule) {
+            onNode(hasContentDescriptionExactly(getString(R.string.lbl_more_information_for_task))).let {
+                it.assertDoesNotExist()
+            }
+        }
+    }
+
+    @Test
+    fun testOpenDetailsCard() {
+        val taskName = "task for details"
+        runBlocking {
+            with(TaskRepository.instance) {
+                newTask(taskName)
+            }
+        }
+        inActivity {
+            selectTaskByName(taskName)
+            assertDetailsCardVisible(taskName)
+        }
+    }
+
+    @Test
+    fun testOpenAnotherDetailsCard() {
+        val taskNames = listOf("task A", "task B", "task C")
+        runBlocking {
+            with(TaskRepository.instance) {
+                for (name in taskNames) {
+                    newTask(name)
+                }
+            }
+        }
+        inActivity {
+            for (name in taskNames) {
+                selectTaskByName(name)
+                assertDetailsCardVisible(name)
+            }
+        }
+    }
+
+    @Test
+    fun testCloseDetailsCardBySecondClickOnMainList() {
+        val taskName = "task for details"
+        runBlocking {
+            with(TaskRepository.instance) {
+                newTask(taskName)
+            }
+        }
+        inActivity {
+            getTaskItemByName(taskName).let {
+                it.performClick()
+                it.performClick()
+            }
+            composeRule.waitForIdle()
+            assertNoDetailsCardVisible()
         }
     }
 
@@ -107,10 +178,7 @@ abstract class MainActivityTester {
         inActivity {
             selectTaskByName(taskName)
             with(composeRule) {
-                onNode(hasContentDescriptionExactly(getString(R.string.cmd_clear_day_done))).let {
-                    it.assertExists()
-                    it.performClick()
-                }
+                onNode(hasContentDescriptionExactly(getString(R.string.cmd_clear_day_done))).performClick()
             }
         }
         assertEquals(null, runBlocking { TaskRepository.instance.getTask(taskId)!!.done })
@@ -130,10 +198,7 @@ abstract class MainActivityTester {
         inActivity {
             selectTaskByName(taskName)
             with(composeRule) {
-                onNode(hasContentDescriptionExactly(getString(R.string.cmd_done_next_day))).let {
-                    it.assertExists()
-                    it.performClick()
-                }
+                onNode(hasContentDescriptionExactly(getString(R.string.cmd_done_next_day))).performClick()
             }
         }
         assertEquals(
@@ -155,10 +220,7 @@ abstract class MainActivityTester {
         inActivity {
             selectTaskByName(taskName)
             with(composeRule) {
-                onNode(hasContentDescriptionExactly(getString(R.string.cmd_done_previous_day))).let {
-                    it.assertExists()
-                    it.performClick()
-                }
+                onNode(hasContentDescriptionExactly(getString(R.string.cmd_done_previous_day))).performClick()
             }
         }
         assertEquals(

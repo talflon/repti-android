@@ -53,6 +53,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -120,7 +122,9 @@ fun MainScreen(tasks: List<Task>) {
                     TaskListItem(
                         task = task,
                         selected = task.id == selectedTaskId,
-                        setSelected = { selectedTaskId = task.id })
+                        setSelected = { selected ->
+                            selectedTaskId = if (selected) task.id else null
+                        })
                 }
             }
 
@@ -187,7 +191,7 @@ fun formatDoneLong(day: Day?): String =
 fun TaskListItem(
     @PreviewParameter(TaskPreviewParameterProvider::class) task: Task,
     selected: Boolean,
-    setSelected: (TaskId) -> Unit
+    setSelected: (Boolean) -> Unit
 ) {
     val scope = rememberCoroutineScope()
 
@@ -197,7 +201,7 @@ fun TaskListItem(
             .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background)
             .selectable(
                 selected = selected,
-                onClick = { setSelected(task.id) }
+                onClick = { setSelected(!selected) }
             ),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -229,8 +233,14 @@ fun TaskDetailCard(
     @PreviewParameter(TaskPreviewParameterProvider::class) task: Task
 ) {
     val scope = rememberCoroutineScope()
+    val cardContentDescription = stringResource(R.string.lbl_more_information_for_task)
 
-    ElevatedCard(modifier.fillMaxWidth()) {
+    ElevatedCard(
+        modifier
+            .fillMaxWidth()
+            .semantics {
+                contentDescription = cardContentDescription
+            }) {
         Column(Modifier.padding(8.dp)) {
             Text(text = task.name, style = MaterialTheme.typography.titleLarge)
             Row(
