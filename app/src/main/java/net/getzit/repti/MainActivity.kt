@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -117,7 +116,12 @@ fun MainScreen(tasks: List<Task>) {
         }
     ) { innerPadding ->
         Column(Modifier.padding(innerPadding)) {
-            LazyColumn(modifier = Modifier.weight(1f), state = rememberLazyListState()) {
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { selectedTaskId = null },
+                state = rememberLazyListState()
+            ) {
                 items(items = tasks, key = { it.id.string }) { task ->
                     TaskListItem(
                         task = task,
@@ -129,11 +133,6 @@ fun MainScreen(tasks: List<Task>) {
             }
 
             if (selectedTaskId != null) {
-                Spacer(
-                    Modifier
-                        .height(16.dp)
-                        .fillMaxWidth()
-                        .clickable { selectedTaskId = null })
                 TaskDetailCard(
                     modifier = Modifier.padding(8.dp),
                     task = tasks.first { it.id == selectedTaskId })
