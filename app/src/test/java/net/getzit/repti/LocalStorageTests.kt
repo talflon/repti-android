@@ -51,14 +51,6 @@ class LocalFileStorageTest {
     }
 }
 
-class MockStorage<T>(var value: T) : Storage<T> {
-    override suspend fun load(): T = value
-
-    override suspend fun save(value: T) {
-        this.value = value
-    }
-}
-
 class DatasetJsonStorageTest {
     private fun exampleDatasets() = sequenceOf(
         Dataset(),
@@ -69,7 +61,7 @@ class DatasetJsonStorageTest {
 
     @Test
     fun testSave() = runTest {
-        val stringStorage = MockStorage("")
+        val stringStorage = VarStorage("")
         for (dataset in exampleDatasets()) {
             DatasetJsonStorage(stringStorage).save(dataset)
             assertDatasetsEqual(dataset, Json.decodeFromString(stringStorage.value))
@@ -81,7 +73,7 @@ class DatasetJsonStorageTest {
         for (dataset in exampleDatasets()) {
             assertDatasetsEqual(
                 dataset,
-                DatasetJsonStorage(MockStorage(Json.encodeToString(dataset))).load()
+                DatasetJsonStorage(VarStorage(Json.encodeToString(dataset))).load()
             )
         }
     }
@@ -90,7 +82,7 @@ class DatasetJsonStorageTest {
     fun testLoadEmpty() = runTest {
         assertDatasetsEqual(
             Dataset(),
-            DatasetJsonStorage(MockStorage("")).load()
+            DatasetJsonStorage(VarStorage("")).load()
         )
     }
 }

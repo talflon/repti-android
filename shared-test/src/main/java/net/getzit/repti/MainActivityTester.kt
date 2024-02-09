@@ -42,8 +42,8 @@ abstract class MainActivityTester {
         ActivityScenario.launch(MainActivity::class.java).use(f)
 
     @Before
-    fun clearTasks(): Unit = runBlocking {
-        TaskRepository.instance.editDataset { it.clear() }
+    fun clearTasks() {
+        TaskRepository.instance = TaskRepository.create(VarStorage(""))
     }
 
     private fun isButton(@StringRes id: Int): SemanticsMatcher {

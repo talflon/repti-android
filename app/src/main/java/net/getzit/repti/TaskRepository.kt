@@ -100,6 +100,14 @@ class TaskRepository(
                 ),
                 externalScope = scope,
             )
+
+        fun create(
+            storage: Storage<String>,
+            scope: CoroutineScope = CoroutineScope(SupervisorJob()),
+        ) = TaskRepository(
+            localSource = DatasetJsonStorage(storage),
+            externalScope = scope,
+        )
     }
 }
 
@@ -151,5 +159,13 @@ class LocalFileStorage(
             context: Context,
             ioDispatcher: CoroutineDispatcher
         ) = LocalFileStorage(File(context.filesDir, path), ioDispatcher)
+    }
+}
+
+class VarStorage<T>(var value: T) : Storage<T> {
+    override suspend fun load(): T = value
+
+    override suspend fun save(value: T) {
+        this.value = value
     }
 }
