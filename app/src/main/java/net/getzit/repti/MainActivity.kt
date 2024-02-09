@@ -27,10 +27,12 @@ import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -64,6 +66,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.test.espresso.IdlingRegistry
+import androidx.test.espresso.idling.CountingIdlingResource
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -79,6 +84,27 @@ class MainActivity : ComponentActivity() {
                 TaskRepository.instance.ensureLoaded()
             }
         }
+    }
+}
+
+val idlingResource = CountingIdlingResource("MainActivity", true).also {
+    IdlingRegistry.getInstance().register(it)
+}
+
+inline fun CoroutineScope.launchIdling(crossinline block: suspend CoroutineScope.() -> Unit) {
+    idlingResource.increment()
+    var launched = false
+    try {
+        launch {
+            try {
+                block()
+            } finally {
+                idlingResource.decrement()
+            }
+        }
+        launched = true
+    } finally {
+        if (!launched) idlingResource.decrement()
     }
 }
 
@@ -100,6 +126,10 @@ fun MainScreen(tasks: List<Task>) {
     val openNewTaskDialog = remember { mutableStateOf(false) }
     var selectedTaskId: TaskId? by remember { mutableStateOf(null) }
     val clearSelectedId = { selectedTaskId = null }
+
+    if (selectedTaskId != null && tasks.none { it.id == selectedTaskId }) {
+        selectedTaskId = null
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -138,7 +168,7 @@ fun MainScreen(tasks: List<Task>) {
                 TaskDetailCard(
                     modifier = Modifier.padding(8.dp),
                     task = tasks.first { it.id == selectedTaskId },
-                    onClose = clearSelectedId,
+                    closeCard = clearSelectedId,
                 )
             }
         }
@@ -148,7 +178,7 @@ fun MainScreen(tasks: List<Task>) {
         NewTaskDialog(
             onDismissRequest = { openNewTaskDialog.value = false },
             onConfirmRequest = { name ->
-                scope.launch {
+                scope.launchIdling {
                     TaskRepository.instance.newTask(name)
                 }
                 openNewTaskDialog.value = false
@@ -219,7 +249,7 @@ fun TaskListItem(
             Text(text = formatDone(task.done), style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.width(8.dp))
             Button(onClick = {
-                scope.launch {
+                scope.launchIdling {
                     TaskRepository.instance.update(task.copy(done = Day.today()))
                 }
             }) {
@@ -233,7 +263,7 @@ fun TaskListItem(
 fun TaskDetailCard(
     modifier: Modifier = Modifier,
     task: Task,
-    onClose: () -> Unit,
+    closeCard: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val cardContentDescription = stringResource(R.string.lbl_more_information_for_task)
@@ -250,24 +280,37 @@ fun TaskDetailCard(
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                Button(onClick = {
+                    scope.launchIdling {
+                        TaskRepository.instance.delete(task)
+                    }
+                }) {
+                    Icon(
+                        Icons.Rounded.Delete,
+                        contentDescription = stringResource(R.string.cmd_delete),
+                    )
+                }
                 Text(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(4.dp),
                     text = task.name,
                     style = MaterialTheme.typography.titleLarge
                 )
-                TextButton(onClick = onClose) {
+                TextButton(onClick = closeCard) {
                     Icon(
                         Icons.Rounded.Close,
                         contentDescription = stringResource(R.string.cmd_close),
                     )
                 }
             }
+            Divider()
             Row(
                 Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Button(onClick = {
-                    scope.launch {
+                    scope.launchIdling {
                         TaskRepository.instance.update(task.copy(done = null))
                     }
                 }) {
@@ -278,7 +321,7 @@ fun TaskDetailCard(
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 Button(onClick = {
-                    scope.launch {
+                    scope.launchIdling {
                         TaskRepository.instance.update(task.copy(done = task.done!!.minusDays(1)))
                     }
                 }, enabled = task.done != null) {
@@ -294,7 +337,7 @@ fun TaskDetailCard(
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 Button(onClick = {
-                    scope.launch {
+                    scope.launchIdling {
                         TaskRepository.instance.update(task.copy(done = task.done!!.plusDays(1)))
                     }
                 }, enabled = task.done != null && task.done < Day.today()) {
@@ -311,7 +354,7 @@ fun TaskDetailCard(
 @Preview
 @Composable
 fun PreviewTaskDetailCard(@PreviewParameter(TaskPreviewParameterProvider::class) task: Task) {
-    TaskDetailCard(task = task, onClose = {})
+    TaskDetailCard(task = task, closeCard = {})
 }
 
 @Composable

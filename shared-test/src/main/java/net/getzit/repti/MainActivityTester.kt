@@ -2,6 +2,8 @@ package net.getzit.repti
 
 import android.content.Context
 import androidx.annotation.StringRes
+import androidx.compose.ui.layout.LayoutInfo
+import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertAny
@@ -25,6 +27,8 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -51,21 +55,36 @@ abstract class MainActivityTester {
         return hasClickAction() and (hasContentDescriptionExactly(cmd) or hasTextExactly(cmd))
     }
 
+    private fun SemanticsNode.isPlaced(): Boolean {
+        var layoutInfo: LayoutInfo? = this.layoutInfo
+        while (layoutInfo != null) {
+            if (!layoutInfo.isPlaced) return false
+            layoutInfo = layoutInfo.parentInfo
+        }
+        return true
+    }
+
+    private fun assertGone(matcher: SemanticsMatcher, useUnmergedTree: Boolean = false) {
+        for (node in composeRule.onAllNodes(matcher, useUnmergedTree).fetchSemanticsNodes()) {
+            assertTrue("A node matching [${matcher.description}] isn't gone", !node.isPlaced())
+        }
+    }
+
     @Test
     fun testCreateNewTask() {
+        val taskName = "the name"
         inActivity {
             with(composeRule) {
-                val taskName = "the name"
                 onNode(isButton(R.string.cmd_create_new_task)).performClick()
-                onNode(isDialog()).assertExists()
+                onNode(isDialog()).assertIsDisplayed()
                 onNode(hasAnyAncestor(isDialog()) and isFocused()).performTextInput(taskName)
                 onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_create)).performClick()
-                waitUntil { TaskRepository.instance.tasks.value!!.isNotEmpty() }
-                onNode(isDialog()).assertDoesNotExist()
-                val tasks = TaskRepository.instance.tasks.value!!
-                assertEquals(1, tasks.size)
-                assertEquals(taskName, tasks.first().name)
+                assertGone(isDialog())
+                waitForIdle()
             }
+            val tasks = TaskRepository.instance.tasks.value!!
+            assertEquals(1, tasks.size)
+            assertEquals(taskName, tasks.first().name)
         }
     }
 
@@ -73,9 +92,9 @@ abstract class MainActivityTester {
     fun testCancelNewTask() = inActivity {
         with(composeRule) {
             onNode(isButton(R.string.cmd_create_new_task)).performClick()
-            onNode(isDialog()).assertExists()
+            onNode(isDialog()).assertIsDisplayed()
             onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_cancel)).performClick()
-            onNode(isDialog()).assertDoesNotExist()
+            assertGone(isDialog())
         }
     }
 
@@ -112,14 +131,15 @@ abstract class MainActivityTester {
             TaskRepository.instance.newTask(taskName)
         }
         inActivity {
-            composeRule.onNodeWithText(taskName).assertExists()
+            composeRule.onNodeWithText(taskName).assertIsDisplayed()
         }
     }
 
-    private fun getTaskItemByName(taskName: String): SemanticsNodeInteraction = composeRule.onNode(
-        isSelectable() and hasAnyChild(hasTextExactly(taskName)),
-        useUnmergedTree = true
-    )
+    private fun isTaskItemByName(taskName: String): SemanticsMatcher =
+        isSelectable() and hasAnyChild(hasTextExactly(taskName))
+
+    private fun getTaskItemByName(taskName: String): SemanticsNodeInteraction =
+        composeRule.onNode(isTaskItemByName(taskName), useUnmergedTree = true)
 
     private fun selectTaskByName(taskName: String) {
         getTaskItemByName(taskName).let {
@@ -139,7 +159,7 @@ abstract class MainActivityTester {
     }
 
     private fun assertNoDetailsCardVisible() {
-        composeRule.onNode(isDetailsCard).assertDoesNotExist()
+        assertGone(isDetailsCard)
     }
 
     @Test
@@ -187,7 +207,6 @@ abstract class MainActivityTester {
                 it.performClick()
                 it.performClick()
             }
-            composeRule.waitForIdle()
             assertNoDetailsCardVisible()
         }
     }
@@ -203,9 +222,7 @@ abstract class MainActivityTester {
         inActivity {
             with(composeRule) {
                 selectTaskByName(taskName)
-                waitForIdle()
                 onNode(hasAnyAncestor(isDetailsCard) and isButton(R.string.cmd_close)).performClick()
-                waitForIdle()
                 assertNoDetailsCardVisible()
             }
         }
@@ -224,10 +241,11 @@ abstract class MainActivityTester {
         inActivity {
             selectTaskByName(taskName)
             with(composeRule) {
-                onNode(isButton(R.string.cmd_clear_day_done)).performClick()
+                onNode(hasAnyAncestor(isDetailsCard) and isButton(R.string.cmd_clear_day_done)).performClick()
+                waitForIdle()
             }
+            assertEquals(null, runBlocking { TaskRepository.instance.getTask(taskId)!!.done })
         }
-        assertEquals(null, runBlocking { TaskRepository.instance.getTask(taskId)!!.done })
     }
 
     @Test
@@ -244,12 +262,13 @@ abstract class MainActivityTester {
         inActivity {
             selectTaskByName(taskName)
             with(composeRule) {
-                onNode(isButton(R.string.cmd_done_next_day)).performClick()
+                onNode(hasAnyAncestor(isDetailsCard) and isButton(R.string.cmd_done_next_day)).performClick()
+                waitForIdle()
             }
+            assertEquals(
+                origDone.plusDays(1) as Day?,
+                runBlocking { TaskRepository.instance.getTask(taskId)!!.done })
         }
-        assertEquals(
-            origDone.plusDays(1) as Day?,
-            runBlocking { TaskRepository.instance.getTask(taskId)!!.done })
     }
 
     @Test
@@ -266,11 +285,30 @@ abstract class MainActivityTester {
         inActivity {
             selectTaskByName(taskName)
             with(composeRule) {
-                onNode(isButton(R.string.cmd_done_previous_day)).performClick()
+                onNode(hasAnyAncestor(isDetailsCard) and isButton(R.string.cmd_done_previous_day)).performClick()
+                waitForIdle()
             }
+            assertEquals(
+                origDone.minusDays(1) as Day?,
+                runBlocking { TaskRepository.instance.getTask(taskId)!!.done })
         }
-        assertEquals(
-            origDone.minusDays(1) as Day?,
-            runBlocking { TaskRepository.instance.getTask(taskId)!!.done })
+    }
+
+    @Test
+    fun testDeleteTask() {
+        val taskName = "task to delete"
+        val taskId = runBlocking {
+            TaskRepository.instance.newTask(taskName).id
+        }
+        inActivity {
+            selectTaskByName(taskName)
+            with(composeRule) {
+                onNode(hasAnyAncestor(isDetailsCard) and isButton(R.string.cmd_delete)).performClick()
+                assertNoDetailsCardVisible()
+                assertGone(isTaskItemByName(taskName), true)
+                waitForIdle()
+            }
+            assertNull(runBlocking { TaskRepository.instance.getTask(taskId) })
+        }
     }
 }
