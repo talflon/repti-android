@@ -26,6 +26,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Clear
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -98,6 +99,7 @@ fun MainScreen(tasks: List<Task>) {
     val scope = rememberCoroutineScope()
     val openNewTaskDialog = remember { mutableStateOf(false) }
     var selectedTaskId: TaskId? by remember { mutableStateOf(null) }
+    val clearSelectedId = { selectedTaskId = null }
 
     Scaffold(
         floatingActionButton = {
@@ -119,15 +121,15 @@ fun MainScreen(tasks: List<Task>) {
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
-                    .clickable { selectedTaskId = null },
+                    .clickable(onClick = clearSelectedId),
                 state = rememberLazyListState()
             ) {
                 items(items = tasks, key = { it.id.string }) { task ->
                     TaskListItem(
                         task = task,
                         selected = task.id == selectedTaskId,
-                        setSelected = { selected ->
-                            selectedTaskId = if (selected) task.id else null
+                        onClick = {
+                            selectedTaskId = if (selectedTaskId != task.id) task.id else null
                         })
                 }
             }
@@ -135,7 +137,9 @@ fun MainScreen(tasks: List<Task>) {
             if (selectedTaskId != null) {
                 TaskDetailCard(
                     modifier = Modifier.padding(8.dp),
-                    task = tasks.first { it.id == selectedTaskId })
+                    task = tasks.first { it.id == selectedTaskId },
+                    onClose = clearSelectedId,
+                )
             }
         }
     }
@@ -188,9 +192,9 @@ fun formatDoneLong(day: Day?): String =
 
 @Composable
 fun TaskListItem(
-    @PreviewParameter(TaskPreviewParameterProvider::class) task: Task,
+    task: Task,
     selected: Boolean,
-    setSelected: (Boolean) -> Unit
+    onClick: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
 
@@ -200,7 +204,7 @@ fun TaskListItem(
             .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background)
             .selectable(
                 selected = selected,
-                onClick = { setSelected(!selected) }
+                onClick = onClick,
             ),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -225,11 +229,11 @@ fun TaskListItem(
     }
 }
 
-@Preview
 @Composable
 fun TaskDetailCard(
     modifier: Modifier = Modifier,
-    @PreviewParameter(TaskPreviewParameterProvider::class) task: Task
+    task: Task,
+    onClose: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val cardContentDescription = stringResource(R.string.lbl_more_information_for_task)
@@ -241,7 +245,23 @@ fun TaskDetailCard(
                 contentDescription = cardContentDescription
             }) {
         Column(Modifier.padding(8.dp)) {
-            Text(text = task.name, style = MaterialTheme.typography.titleLarge)
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    modifier = Modifier.weight(1f),
+                    text = task.name,
+                    style = MaterialTheme.typography.titleLarge
+                )
+                TextButton(onClick = onClose) {
+                    Icon(
+                        Icons.Rounded.Close,
+                        contentDescription = stringResource(R.string.cmd_close),
+                    )
+                }
+            }
             Row(
                 Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -286,6 +306,12 @@ fun TaskDetailCard(
             }
         }
     }
+}
+
+@Preview
+@Composable
+fun PreviewTaskDetailCard(@PreviewParameter(TaskPreviewParameterProvider::class) task: Task) {
+    TaskDetailCard(task = task, onClose = {})
 }
 
 @Composable

@@ -2,10 +2,12 @@ package net.getzit.repti
 
 import android.content.Context
 import androidx.annotation.StringRes
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertAny
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasAnyChild
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescriptionExactly
@@ -43,19 +45,22 @@ abstract class MainActivityTester {
         TaskRepository.instance.editDataset { it.clear() }
     }
 
+    private fun isButton(@StringRes id: Int): SemanticsMatcher {
+        val cmd = getString(id)
+        return hasClickAction() and (hasContentDescriptionExactly(cmd) or hasTextExactly(cmd))
+    }
+
     @Test
     fun testCreateNewTask() {
         inActivity {
             with(composeRule) {
                 val taskName = "the name"
-                onNode(hasClickAction() and hasContentDescriptionExactly(getString(R.string.cmd_create_new_task))).performClick()
-                with(onNode(isDialog())) {
-                    assertExists()
-                    onNode(isFocused()).performTextInput(taskName)
-                    onNode(hasClickAction() and hasTextExactly(getString(R.string.cmd_create))).performClick()
-                    waitUntil { TaskRepository.instance.tasks.value!!.isNotEmpty() }
-                    assertDoesNotExist()
-                }
+                onNode(isButton(R.string.cmd_create_new_task)).performClick()
+                onNode(isDialog()).assertExists()
+                onNode(hasAnyAncestor(isDialog()) and isFocused()).performTextInput(taskName)
+                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_create)).performClick()
+                waitUntil { TaskRepository.instance.tasks.value!!.isNotEmpty() }
+                onNode(isDialog()).assertDoesNotExist()
                 val tasks = TaskRepository.instance.tasks.value!!
                 assertEquals(1, tasks.size)
                 assertEquals(taskName, tasks.first().name)
@@ -66,12 +71,10 @@ abstract class MainActivityTester {
     @Test
     fun testCancelNewTask() = inActivity {
         with(composeRule) {
-            onNode(hasClickAction() and hasContentDescriptionExactly(getString(R.string.cmd_create_new_task))).performClick()
-            with(onNode(isDialog())) {
-                assertExists()
-                onNode(hasClickAction() and hasTextExactly(getString(R.string.cmd_cancel))).performClick()
-                assertDoesNotExist()
-            }
+            onNode(isButton(R.string.cmd_create_new_task)).performClick()
+            onNode(isDialog()).assertExists()
+            onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_cancel)).performClick()
+            onNode(isDialog()).assertDoesNotExist()
         }
     }
 
@@ -98,21 +101,18 @@ abstract class MainActivityTester {
         }
     }
 
+    private val isDetailsCard =
+        hasContentDescriptionExactly(getString(R.string.lbl_more_information_for_task))
+
     private fun assertDetailsCardVisible(taskName: String) {
-        with(composeRule) {
-            onNode(hasContentDescriptionExactly(getString(R.string.lbl_more_information_for_task))).let {
-                it.assertIsDisplayed()
-                it.onChildren().assertAny(hasTextExactly(taskName))
-            }
+        composeRule.onNode(isDetailsCard).let {
+            it.assertIsDisplayed()
+            it.onChildren().assertAny(hasTextExactly(taskName))
         }
     }
 
     private fun assertNoDetailsCardVisible() {
-        with(composeRule) {
-            onNode(hasContentDescriptionExactly(getString(R.string.lbl_more_information_for_task))).let {
-                it.assertDoesNotExist()
-            }
-        }
+        composeRule.onNode(isDetailsCard).assertDoesNotExist()
     }
 
     @Test
@@ -149,7 +149,7 @@ abstract class MainActivityTester {
 
     @Test
     fun testCloseDetailsCardBySecondClickOnMainList() {
-        val taskName = "task for details"
+        val taskName = "task to toggle details"
         runBlocking {
             with(TaskRepository.instance) {
                 newTask(taskName)
@@ -166,6 +166,25 @@ abstract class MainActivityTester {
     }
 
     @Test
+    fun testCloseDetailsCardByCloseButton() {
+        val taskName = "task to close details"
+        runBlocking {
+            with(TaskRepository.instance) {
+                newTask(taskName)
+            }
+        }
+        inActivity {
+            with(composeRule) {
+                selectTaskByName(taskName)
+                waitForIdle()
+                onNode(hasAnyAncestor(isDetailsCard) and isButton(R.string.cmd_close)).performClick()
+                waitForIdle()
+                assertNoDetailsCardVisible()
+            }
+        }
+    }
+
+    @Test
     fun testClearDayDone() {
         val taskName = "my task"
         val taskId = runBlocking {
@@ -178,7 +197,7 @@ abstract class MainActivityTester {
         inActivity {
             selectTaskByName(taskName)
             with(composeRule) {
-                onNode(hasContentDescriptionExactly(getString(R.string.cmd_clear_day_done))).performClick()
+                onNode(isButton(R.string.cmd_clear_day_done)).performClick()
             }
         }
         assertEquals(null, runBlocking { TaskRepository.instance.getTask(taskId)!!.done })
@@ -198,7 +217,7 @@ abstract class MainActivityTester {
         inActivity {
             selectTaskByName(taskName)
             with(composeRule) {
-                onNode(hasContentDescriptionExactly(getString(R.string.cmd_done_next_day))).performClick()
+                onNode(isButton(R.string.cmd_done_next_day)).performClick()
             }
         }
         assertEquals(
@@ -220,7 +239,7 @@ abstract class MainActivityTester {
         inActivity {
             selectTaskByName(taskName)
             with(composeRule) {
-                onNode(hasContentDescriptionExactly(getString(R.string.cmd_done_previous_day))).performClick()
+                onNode(isButton(R.string.cmd_done_previous_day)).performClick()
             }
         }
         assertEquals(

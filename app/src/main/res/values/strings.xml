@@ -15,4 +15,5 @@
     <string name="lbl_yesterday">yesterday</string>
     <string name="lbl_days_ago">%1$s days ago</string>
     <string name="lbl_more_information_for_task">more information for task</string>
+    <string name="cmd_close">Close</string>
 </resources>
