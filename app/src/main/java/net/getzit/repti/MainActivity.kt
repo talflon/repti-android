@@ -347,6 +347,7 @@ fun NewTaskDialog(onDismissRequest: () -> Unit, onConfirmRequest: (String) -> Un
                     }
                     TextButton(
                         onClick = { onConfirmRequest(newTaskName) },
+                        enabled = newTaskName.isNotEmpty(),
                     ) {
                         Text(stringResource(R.string.cmd_create))
                     }

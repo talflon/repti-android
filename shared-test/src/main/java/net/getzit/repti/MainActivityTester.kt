@@ -19,6 +19,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -75,6 +76,32 @@ abstract class MainActivityTester {
             onNode(isDialog()).assertExists()
             onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_cancel)).performClick()
             onNode(isDialog()).assertDoesNotExist()
+        }
+    }
+
+    @Test
+    fun testRefuseCreateUnnamedTask() {
+        inActivity {
+            with(composeRule) {
+                onNode(isButton(R.string.cmd_create_new_task)).performClick()
+                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_create)).performClick()
+                waitForIdle()
+            }
+            assertEquals(emptyList<Task>(), TaskRepository.instance.tasks.value)
+        }
+    }
+
+    @Test
+    fun testRefuseCreateTaskNameCleared() {
+        inActivity {
+            with(composeRule) {
+                onNode(isButton(R.string.cmd_create_new_task)).performClick()
+                onNode(hasAnyAncestor(isDialog()) and isFocused()).performTextInput("blah blah")
+                onNode(hasAnyAncestor(isDialog()) and isFocused()).performTextClearance()
+                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_create)).performClick()
+                waitForIdle()
+            }
+            assertEquals(emptyList<Task>(), TaskRepository.instance.tasks.value)
         }
     }
 
