@@ -17,4 +17,6 @@
     <string name="lbl_more_information_for_task">more information for task</string>
     <string name="cmd_close">Close</string>
     <string name="cmd_delete">Delete</string>
+    <string name="qst_delete">Delete this task permanently?</string>
+    <string name="dsc_delete">This will delete the task from your list of tasks. It cannot be undone.</string>
 </resources>

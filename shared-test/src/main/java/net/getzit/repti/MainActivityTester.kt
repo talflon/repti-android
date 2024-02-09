@@ -287,11 +287,34 @@ abstract class MainActivityTester {
             selectTaskByName(taskName)
             with(composeRule) {
                 onNode(hasAnyAncestor(isDetailsCard) and isButton(R.string.cmd_delete)).performClick()
+                onNode(isDialog()).assertIsDisplayed()
+                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_delete)).performClick()
+                onNode(isDialog()).assertIsNotDisplayed()
                 assertNoDetailsCardVisible()
                 onNode(isTaskItemByName(taskName), true).assertDoesNotExist()
                 waitForIdle()
             }
             assertNull(runBlocking { TaskRepository.instance.getTask(taskId) })
+        }
+    }
+
+    @Test
+    fun testCancelDeleteTask() {
+        val taskName = "task to delete"
+        val task = runBlocking {
+            TaskRepository.instance.newTask(taskName)
+        }
+        inActivity {
+            selectTaskByName(taskName)
+            with(composeRule) {
+                onNode(hasAnyAncestor(isDetailsCard) and isButton(R.string.cmd_delete)).performClick()
+                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_cancel)).performClick()
+                onNode(isDialog()).assertIsNotDisplayed()
+                assertDetailsCardVisible(taskName)
+                getTaskItemByName(taskName).assertExists()
+                waitForIdle()
+            }
+            assertEquals(task, runBlocking { TaskRepository.instance.getTask(task.id) })
         }
     }
 }

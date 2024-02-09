@@ -29,6 +29,7 @@ import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Done
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -267,6 +268,7 @@ fun TaskDetailCard(
 ) {
     val scope = rememberCoroutineScope()
     val cardContentDescription = stringResource(R.string.lbl_more_information_for_task)
+    var openDeleteDialog by remember { mutableStateOf(false) }
 
     ElevatedCard(
         modifier
@@ -281,9 +283,7 @@ fun TaskDetailCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Button(onClick = {
-                    scope.launchIdling {
-                        TaskRepository.instance.delete(task)
-                    }
+                    openDeleteDialog = true
                 }) {
                     Icon(
                         Icons.Rounded.Delete,
@@ -348,6 +348,38 @@ fun TaskDetailCard(
                 }
             }
         }
+    }
+
+    if (openDeleteDialog) {
+        AlertDialog(
+            icon = {
+                Icon(
+                    Icons.Rounded.Delete,
+                    contentDescription = stringResource(R.string.cmd_delete)
+                )
+            },
+            title = { Text(stringResource(R.string.qst_delete)) },
+            text = { Text(stringResource(R.string.dsc_delete)) },
+            onDismissRequest = { openDeleteDialog = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.launchIdling {
+                            TaskRepository.instance.delete(task)
+                        }
+                    },
+                ) {
+                    Text(stringResource(R.string.cmd_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { openDeleteDialog = false },
+                ) {
+                    Text(stringResource(R.string.cmd_cancel))
+                }
+            }
+        )
     }
 }
 
