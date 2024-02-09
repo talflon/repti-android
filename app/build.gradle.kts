@@ -59,7 +59,7 @@ dependencies {
     testImplementation("org.skyscreamer:jsonassert:1.5.1")
     dokkaPlugin("org.jetbrains.dokka:android-documentation-plugin:1.9.10")
 
-    val composeBom = platform("androidx.compose:compose-bom:2023.10.01")
+    val composeBom = platform("androidx.compose:compose-bom:2024.02.00")
     for (lib in sequenceOf(
         composeBom,
         "androidx.test.espresso:espresso-core:3.5.1",

@@ -2,12 +2,11 @@ package net.getzit.repti
 
 import android.content.Context
 import androidx.annotation.StringRes
-import androidx.compose.ui.layout.LayoutInfo
-import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertAny
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasAnyChild
@@ -28,7 +27,6 @@ import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -55,21 +53,6 @@ abstract class MainActivityTester {
         return hasClickAction() and (hasContentDescriptionExactly(cmd) or hasTextExactly(cmd))
     }
 
-    private fun SemanticsNode.isPlaced(): Boolean {
-        var layoutInfo: LayoutInfo? = this.layoutInfo
-        while (layoutInfo != null) {
-            if (!layoutInfo.isPlaced) return false
-            layoutInfo = layoutInfo.parentInfo
-        }
-        return true
-    }
-
-    private fun assertGone(matcher: SemanticsMatcher, useUnmergedTree: Boolean = false) {
-        for (node in composeRule.onAllNodes(matcher, useUnmergedTree).fetchSemanticsNodes()) {
-            assertTrue("A node matching [${matcher.description}] isn't gone", !node.isPlaced())
-        }
-    }
-
     @Test
     fun testCreateNewTask() {
         val taskName = "the name"
@@ -79,7 +62,7 @@ abstract class MainActivityTester {
                 onNode(isDialog()).assertIsDisplayed()
                 onNode(hasAnyAncestor(isDialog()) and isFocused()).performTextInput(taskName)
                 onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_create)).performClick()
-                assertGone(isDialog())
+                onNode(isDialog()).assertIsNotDisplayed()
                 waitForIdle()
             }
             val tasks = TaskRepository.instance.tasks.value!!
@@ -89,12 +72,12 @@ abstract class MainActivityTester {
     }
 
     @Test
-    fun testCancelNewTask() = inActivity {
+    fun testCancelNewTask(): Unit = inActivity {
         with(composeRule) {
             onNode(isButton(R.string.cmd_create_new_task)).performClick()
             onNode(isDialog()).assertIsDisplayed()
             onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_cancel)).performClick()
-            assertGone(isDialog())
+            onNode(isDialog()).assertIsNotDisplayed()
         }
     }
 
@@ -159,7 +142,7 @@ abstract class MainActivityTester {
     }
 
     private fun assertNoDetailsCardVisible() {
-        assertGone(isDetailsCard)
+        composeRule.onNode(isDetailsCard).assertIsNotDisplayed()
     }
 
     @Test
@@ -305,7 +288,7 @@ abstract class MainActivityTester {
             with(composeRule) {
                 onNode(hasAnyAncestor(isDetailsCard) and isButton(R.string.cmd_delete)).performClick()
                 assertNoDetailsCardVisible()
-                assertGone(isTaskItemByName(taskName), true)
+                onNode(isTaskItemByName(taskName), true).assertDoesNotExist()
                 waitForIdle()
             }
             assertNull(runBlocking { TaskRepository.instance.getTask(taskId) })
