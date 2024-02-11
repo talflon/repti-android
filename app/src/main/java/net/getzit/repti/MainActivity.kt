@@ -10,6 +10,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowBack
@@ -29,6 +31,8 @@ import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Done
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -55,10 +59,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -126,24 +129,6 @@ fun MainUI(@PreviewParameter(TaskListPreviewParameterProvider::class) tasks: Lis
 }
 
 @Composable
-fun ScrollableIndicator(scrollable: Boolean) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .background(if (scrollable) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent),
-        horizontalArrangement = Arrangement.Center,
-    ) {
-        Icon(
-            painterResource(R.drawable.baseline_more_horiz_24),
-            null,
-            modifier = Modifier
-                .alpha(if (scrollable) 1f else 0f)
-                .background(Color.Green)
-        )
-    }
-}
-
-@Composable
 fun MainScreen(tasks: List<Task>) {
     val scope = rememberCoroutineScope()
     var openNewTaskDialog by rememberSaveable { mutableStateOf(false) }
@@ -172,23 +157,46 @@ fun MainScreen(tasks: List<Task>) {
         }
     ) { innerPadding ->
         Column(Modifier.padding(innerPadding)) {
-            ScrollableIndicator(listState.canScrollBackward)
-            LazyColumn(
+            Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clickable(onClick = clearSelectedId),
-                state = listState,
+                    .clickable(onClick = clearSelectedId)
             ) {
-                items(items = tasks, key = { it.id.string }) { task ->
-                    TaskListItem(
-                        task = task,
-                        selected = task.id == selectedTaskId,
-                        onClick = {
-                            selectedTaskId = if (selectedTaskId != task.id) task.id else null
-                        })
+                LazyColumn(
+                    state = listState,
+                ) {
+                    items(items = tasks, key = { it.id.string }) { task ->
+                        TaskListItem(
+                            task = task,
+                            selected = task.id == selectedTaskId,
+                            onClick = {
+                                selectedTaskId = if (selectedTaskId != task.id) task.id else null
+                            })
+                    }
+                }
+                if (listState.canScrollBackward) {
+                    Icon(
+                        Icons.Rounded.KeyboardArrowUp,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.75f))
+                            .alpha(0.75f),
+                    )
+                }
+                if (listState.canScrollForward) {
+                    Icon(
+                        Icons.Rounded.KeyboardArrowDown,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.75f))
+                            .alpha(0.75f),
+                    )
                 }
             }
-            ScrollableIndicator(listState.canScrollForward)
 
             if (selectedTaskId != null) {
                 TaskDetailCard(
