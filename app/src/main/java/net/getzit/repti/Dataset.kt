@@ -2,9 +2,15 @@ package net.getzit.repti
 
 import android.os.Parcel
 import android.os.Parcelable
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import java.lang.Math.toIntExact
 import java.time.Clock
@@ -201,9 +207,8 @@ class Dataset {
 /**
  * Identifies a [Task], even if the task's name changes.
  */
-@Serializable
-@JvmInline
-value class TaskId(val string: String) : Parcelable {
+@Serializable(with = TaskIdAsStringSerializer::class)
+class TaskId(val string: String) : Parcelable {
     companion object {
         const val ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz"
         const val ALPHABET_LENGTH = ALPHABET.length
@@ -238,6 +243,26 @@ value class TaskId(val string: String) : Parcelable {
     }
 
     override fun describeContents() = 0
+
+    override fun toString() = string
+
+    override fun hashCode() = string.hashCode()
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        return string == (other as TaskId).string
+    }
+}
+
+class TaskIdAsStringSerializer : KSerializer<TaskId> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("TaskId", PrimitiveKind.STRING)
+
+    override fun deserialize(decoder: Decoder) = TaskId(decoder.decodeString())
+
+    override fun serialize(encoder: Encoder, value: TaskId) {
+        encoder.encodeString(value.string)
+    }
 }
 
 /**
