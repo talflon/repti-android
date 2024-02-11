@@ -50,6 +50,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -124,8 +125,8 @@ fun MainUI(@PreviewParameter(TaskListPreviewParameterProvider::class) tasks: Lis
 @Composable
 fun MainScreen(tasks: List<Task>) {
     val scope = rememberCoroutineScope()
-    val openNewTaskDialog = remember { mutableStateOf(false) }
-    var selectedTaskId: TaskId? by remember { mutableStateOf(null) }
+    var openNewTaskDialog by rememberSaveable { mutableStateOf(false) }
+    var selectedTaskId: TaskId? by rememberSaveable { mutableStateOf(null) }
     val clearSelectedId = { selectedTaskId = null }
 
     if (selectedTaskId != null && tasks.none { it.id == selectedTaskId }) {
@@ -139,7 +140,7 @@ fun MainScreen(tasks: List<Task>) {
                 exit = scaleOut(),
                 enter = scaleIn(),
             ) {
-                FloatingActionButton(onClick = { openNewTaskDialog.value = true }) {
+                FloatingActionButton(onClick = { openNewTaskDialog = true }) {
                     Icon(
                         Icons.Rounded.Add,
                         contentDescription = stringResource(R.string.cmd_create_new_task)
@@ -175,14 +176,14 @@ fun MainScreen(tasks: List<Task>) {
         }
     }
 
-    if (openNewTaskDialog.value) {
+    if (openNewTaskDialog) {
         NewTaskDialog(
-            onDismissRequest = { openNewTaskDialog.value = false },
+            onDismissRequest = { openNewTaskDialog = false },
             onConfirmRequest = { name ->
                 scope.launchIdling {
                     TaskRepository.instance.newTask(name)
                 }
-                openNewTaskDialog.value = false
+                openNewTaskDialog = false
             },
         )
     }
@@ -268,7 +269,7 @@ fun TaskDetailCard(
 ) {
     val scope = rememberCoroutineScope()
     val cardContentDescription = stringResource(R.string.lbl_more_information_for_task)
-    var openDeleteDialog by remember { mutableStateOf(false) }
+    var openDeleteDialog by rememberSaveable { mutableStateOf(false) }
 
     ElevatedCard(
         modifier
@@ -391,7 +392,7 @@ fun PreviewTaskDetailCard(@PreviewParameter(TaskPreviewParameterProvider::class)
 
 @Composable
 fun NewTaskDialog(onDismissRequest: () -> Unit, onConfirmRequest: (String) -> Unit) {
-    var newTaskName by remember { mutableStateOf("") }
+    var newTaskName by rememberSaveable { mutableStateOf("") }
     val textFocusRequester = remember { FocusRequester() }
 
     Dialog(onDismissRequest = onDismissRequest) {

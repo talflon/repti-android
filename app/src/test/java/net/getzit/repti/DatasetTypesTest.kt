@@ -1,5 +1,7 @@
 package net.getzit.repti
 
+import android.os.Bundle
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.kotest.common.runBlocking
 import io.kotest.property.Arb
 import io.kotest.property.arbitrary.int
@@ -13,6 +15,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
 import java.time.LocalDate
 import java.time.ZoneOffset
 import kotlin.random.Random
@@ -106,5 +109,20 @@ class DatasetTypesTest {
         assertFalse(TaskId("muchmuchtoolong").valid)
         assertFalse(TaskId("123456é").valid)
         assertFalse(TaskId("A234567").valid)
+    }
+}
+
+@RunWith(AndroidJUnit4::class)
+class DatasetTypesParcelableTest {
+    @Test
+    fun testTaskIdInBundle() {
+        val key = "key"
+        runBlocking {
+            checkAll<TaskId> { id ->
+                val bundle = Bundle()
+                bundle.putParcelable(key, id)
+                assertEquals(id, bundle.getParcelable(key, TaskId::class.java))
+            }
+        }
     }
 }
