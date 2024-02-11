@@ -79,6 +79,7 @@ import androidx.test.espresso.IdlingRegistry
 import androidx.test.espresso.idling.CountingIdlingResource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import net.getzit.repti.ui.theme.ReptiTheme
 import java.time.LocalDate
 
 class MainActivity : ComponentActivity() {
@@ -86,7 +87,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val tasks by TaskRepository.instance.tasks.collectAsState()
-            MainUI(tasks)
+            ReptiTheme(dynamicColor = false) {
+                MainUI(tasks)
+            }
         }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
