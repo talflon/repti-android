@@ -54,8 +54,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -123,11 +126,30 @@ fun MainUI(@PreviewParameter(TaskListPreviewParameterProvider::class) tasks: Lis
 }
 
 @Composable
+fun ScrollableIndicator(scrollable: Boolean) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(if (scrollable) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            painterResource(R.drawable.baseline_more_horiz_24),
+            null,
+            modifier = Modifier
+                .alpha(if (scrollable) 1f else 0f)
+                .background(Color.Green)
+        )
+    }
+}
+
+@Composable
 fun MainScreen(tasks: List<Task>) {
     val scope = rememberCoroutineScope()
     var openNewTaskDialog by rememberSaveable { mutableStateOf(false) }
     var selectedTaskId: TaskId? by rememberSaveable { mutableStateOf(null) }
     val clearSelectedId = { selectedTaskId = null }
+    val listState = rememberLazyListState()
 
     if (selectedTaskId != null && tasks.none { it.id == selectedTaskId }) {
         selectedTaskId = null
@@ -150,11 +172,12 @@ fun MainScreen(tasks: List<Task>) {
         }
     ) { innerPadding ->
         Column(Modifier.padding(innerPadding)) {
+            ScrollableIndicator(listState.canScrollBackward)
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
                     .clickable(onClick = clearSelectedId),
-                state = rememberLazyListState()
+                state = listState,
             ) {
                 items(items = tasks, key = { it.id.string }) { task ->
                     TaskListItem(
@@ -165,6 +188,7 @@ fun MainScreen(tasks: List<Task>) {
                         })
                 }
             }
+            ScrollableIndicator(listState.canScrollForward)
 
             if (selectedTaskId != null) {
                 TaskDetailCard(
