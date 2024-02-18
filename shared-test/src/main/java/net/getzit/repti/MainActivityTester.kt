@@ -16,7 +16,7 @@ import androidx.compose.ui.test.hasTextExactly
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.isSelectable
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -33,7 +33,7 @@ import org.junit.Test
 
 abstract class MainActivityTester {
     @get:Rule
-    val composeRule = createComposeRule()
+    val composeRule = createEmptyComposeRule()
 
     protected val context: Context
         get() = ApplicationProvider.getApplicationContext<MainActivity>()
