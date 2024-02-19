@@ -8,8 +8,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,7 +27,6 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Clear
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -38,11 +35,12 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
-import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -137,7 +135,6 @@ fun MainScreen(tasks: List<Task>) {
     val scope = rememberCoroutineScope()
     var openNewTaskDialog by rememberSaveable { mutableStateOf(false) }
     var selectedTaskId: TaskId? by rememberSaveable { mutableStateOf(null) }
-    val clearSelectedId = { selectedTaskId = null }
     val listState = rememberLazyListState()
 
     if (selectedTaskId != null && tasks.none { it.id == selectedTaskId }) {
@@ -160,58 +157,46 @@ fun MainScreen(tasks: List<Task>) {
             }
         }
     ) { innerPadding ->
-        Column(Modifier.padding(innerPadding)) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable(
-                        onClick = clearSelectedId,
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() })
+        Box(Modifier.padding(innerPadding)) {
+            LazyColumn(
+                state = listState,
             ) {
-                LazyColumn(
-                    state = listState,
-                ) {
-                    items(items = tasks, key = { it.id.string }) { task ->
-                        TaskListItem(
-                            task = task,
-                            selected = task.id == selectedTaskId,
-                            onClick = {
-                                selectedTaskId = if (selectedTaskId != task.id) task.id else null
-                            })
-                    }
-                }
-                if (listState.canScrollBackward) {
-                    Icon(
-                        Icons.Rounded.KeyboardArrowUp,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.75f))
-                            .alpha(0.75f),
-                    )
-                }
-                if (listState.canScrollForward) {
-                    Icon(
-                        Icons.Rounded.KeyboardArrowDown,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.75f))
-                            .alpha(0.75f),
-                    )
+                items(items = tasks, key = { it.id.string }) { task ->
+                    TaskListItem(
+                        task = task,
+                        selected = task.id == selectedTaskId,
+                        onClick = { selectedTaskId = task.id })
                 }
             }
-
-            if (selectedTaskId != null) {
-                TaskDetailCard(
-                    modifier = Modifier.padding(8.dp),
-                    task = tasks.first { it.id == selectedTaskId },
-                    closeCard = clearSelectedId,
+            if (listState.canScrollBackward) {
+                Icon(
+                    Icons.Rounded.KeyboardArrowUp,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.75f))
+                        .alpha(0.75f),
                 )
             }
+            if (listState.canScrollForward) {
+                Icon(
+                    Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.75f))
+                        .alpha(0.75f),
+                )
+            }
+        }
+
+        if (selectedTaskId != null) {
+            TaskDetailCard(
+                task = tasks.first { it.id == selectedTaskId },
+                closeCard = { selectedTaskId = null },
+            )
         }
     }
 
@@ -300,9 +285,9 @@ fun TaskListItem(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskDetailCard(
-    modifier: Modifier = Modifier,
     task: Task,
     closeCard: () -> Unit,
 ) {
@@ -310,12 +295,10 @@ fun TaskDetailCard(
     val cardContentDescription = stringResource(R.string.lbl_more_information_for_task)
     var openDeleteDialog by rememberSaveable { mutableStateOf(false) }
 
-    ElevatedCard(
-        modifier
-            .fillMaxWidth()
-            .semantics {
-                contentDescription = cardContentDescription
-            }) {
+    ModalBottomSheet(
+        modifier = Modifier.semantics { contentDescription = cardContentDescription },
+        onDismissRequest = closeCard,
+    ) {
         Column(Modifier.padding(8.dp)) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -337,14 +320,8 @@ fun TaskDetailCard(
                     text = task.name,
                     style = MaterialTheme.typography.titleLarge
                 )
-                TextButton(onClick = closeCard) {
-                    Icon(
-                        Icons.Rounded.Close,
-                        contentDescription = stringResource(R.string.cmd_close),
-                    )
-                }
             }
-            Divider()
+            HorizontalDivider()
             Row(
                 Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,

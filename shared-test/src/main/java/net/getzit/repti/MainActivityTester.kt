@@ -160,58 +160,6 @@ abstract class MainActivityTester {
     }
 
     @Test
-    fun testOpenAnotherDetailsCard() {
-        val taskNames = listOf("task A", "task B", "task C")
-        runBlocking {
-            with(TaskRepository.instance) {
-                for (name in taskNames) {
-                    newTask(name)
-                }
-            }
-        }
-        inActivity {
-            for (name in taskNames) {
-                selectTaskByName(name)
-                assertDetailsCardVisible(name)
-            }
-        }
-    }
-
-    @Test
-    fun testCloseDetailsCardBySecondClickOnMainList() {
-        val taskName = "task to toggle details"
-        runBlocking {
-            with(TaskRepository.instance) {
-                newTask(taskName)
-            }
-        }
-        inActivity {
-            getTaskItemByName(taskName).let {
-                it.performClick()
-                it.performClick()
-            }
-            assertNoDetailsCardVisible()
-        }
-    }
-
-    @Test
-    fun testCloseDetailsCardByCloseButton() {
-        val taskName = "task to close details"
-        runBlocking {
-            with(TaskRepository.instance) {
-                newTask(taskName)
-            }
-        }
-        inActivity {
-            with(composeRule) {
-                selectTaskByName(taskName)
-                onNode(hasAnyAncestor(isDetailsCard) and isButton(R.string.cmd_close)).performClick()
-                assertNoDetailsCardVisible()
-            }
-        }
-    }
-
-    @Test
     fun testClearDayDone() {
         val taskName = "my task"
         val taskId = runBlocking {
