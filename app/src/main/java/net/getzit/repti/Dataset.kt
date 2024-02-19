@@ -1,7 +1,7 @@
 package net.getzit.repti
 
-import android.os.Parcel
 import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -208,6 +208,7 @@ class Dataset {
  * Identifies a [Task], even if the task's name changes.
  */
 @Serializable(with = TaskIdAsStringSerializer::class)
+@Parcelize
 class TaskId(val string: String) : Parcelable {
     companion object {
         const val ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz"
@@ -225,24 +226,11 @@ class TaskId(val string: String) : Parcelable {
                     i /= ALPHABET_LENGTH
                 }
             })
-
-        @JvmField
-        val CREATOR = object : Parcelable.Creator<TaskId> {
-            override fun createFromParcel(parcel: Parcel) = TaskId(parcel)
-            override fun newArray(size: Int): Array<TaskId?> = arrayOfNulls(size)
-        }
     }
 
+    @Transient
     val valid: Boolean
         get() = string.length == LENGTH && string.all { it in ALPHABET }
-
-    constructor(parcel: Parcel) : this(parcel.readString()!!)
-
-    override fun writeToParcel(parcel: Parcel, flags: Int) {
-        parcel.writeString(string)
-    }
-
-    override fun describeContents() = 0
 
     override fun toString() = string
 
