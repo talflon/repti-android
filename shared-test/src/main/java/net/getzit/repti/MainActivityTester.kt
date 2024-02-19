@@ -72,6 +72,23 @@ abstract class MainActivityTester {
     }
 
     @Test
+    fun testCreateNewTaskTrimsWhitespace() {
+        inActivity {
+            with(composeRule) {
+                onNode(isButton(R.string.cmd_create_new_task)).performClick()
+                onNode(isDialog()).assertIsDisplayed()
+                onNode(hasAnyAncestor(isDialog()) and isFocused()).performTextInput("  name   ")
+                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_create)).performClick()
+                onNode(isDialog()).assertIsNotDisplayed()
+                waitForIdle()
+            }
+            val tasks = TaskRepository.instance.tasks.value!!
+            assertEquals(1, tasks.size)
+            assertEquals("name", tasks.first().name)
+        }
+    }
+
+    @Test
     fun testCancelNewTask(): Unit = inActivity {
         with(composeRule) {
             onNode(isButton(R.string.cmd_create_new_task)).performClick()

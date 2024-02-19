@@ -431,7 +431,7 @@ fun NewTaskDialog(onDismissRequest: () -> Unit, onConfirmRequest: (String) -> Un
                     maxLines = 3,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     modifier = Modifier.focusRequester(textFocusRequester),
-                    onValueChange = { newTaskName = it },
+                    onValueChange = { newTaskName = it.trimStart() },
                     label = { Text(stringResource(R.string.lbl_name)) })
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(32.dp),
@@ -442,8 +442,8 @@ fun NewTaskDialog(onDismissRequest: () -> Unit, onConfirmRequest: (String) -> Un
                         Text(stringResource(R.string.cmd_cancel))
                     }
                     TextButton(
-                        onClick = { onConfirmRequest(newTaskName) },
-                        enabled = newTaskName.isNotEmpty(),
+                        onClick = { onConfirmRequest(newTaskName.trim()) },
+                        enabled = newTaskName.trim().isNotEmpty(),
                     ) {
                         Text(stringResource(R.string.cmd_create))
                     }
