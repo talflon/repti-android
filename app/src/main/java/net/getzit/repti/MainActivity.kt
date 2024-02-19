@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Done
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
@@ -48,6 +49,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -296,6 +298,7 @@ fun TaskDetailCard(
     val scope = rememberCoroutineScope()
     val cardContentDescription = stringResource(R.string.lbl_more_information_for_task)
     var openDeleteDialog by rememberSaveable { mutableStateOf(false) }
+    var openEditDialog by rememberSaveable { mutableStateOf(false) }
 
     ModalBottomSheet(
         modifier = Modifier.semantics { contentDescription = cardContentDescription },
@@ -322,6 +325,14 @@ fun TaskDetailCard(
                     text = task.name,
                     style = MaterialTheme.typography.titleLarge
                 )
+                Button(onClick = {
+                    openEditDialog = true
+                }) {
+                    Icon(
+                        Icons.Rounded.Edit,
+                        contentDescription = stringResource(R.string.cmd_edit_task),
+                    )
+                }
             }
             HorizontalDivider()
             Row(
@@ -399,6 +410,16 @@ fun TaskDetailCard(
                 }
             }
         )
+    } else if (openEditDialog) {
+        EditTaskNameDialog(
+            oldName = task.name,
+            onDismissRequest = { openEditDialog = false },
+            onConfirmRequest = {
+                openEditDialog = false
+                scope.launchIdling {
+                    TaskRepository.instance.update(task.copy(name = it))
+                }
+            })
     }
 }
 
@@ -409,9 +430,28 @@ fun PreviewTaskDetailCard(@PreviewParameter(TaskPreviewParameterProvider::class)
 }
 
 @Composable
+fun NameTextField(newTaskNameState: MutableState<String>, defaultFocus: Boolean = false) {
+    var newTaskName by newTaskNameState
+    val nameContentDescription = stringResource(R.string.lbl_name)
+    var modifier = Modifier.semantics { contentDescription = nameContentDescription }
+    if (defaultFocus) {
+        val focusRequester = remember { FocusRequester() }
+        modifier = modifier.focusRequester(focusRequester)
+        LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    }
+
+    OutlinedTextField(
+        value = newTaskName,
+        maxLines = 3,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        modifier = modifier,
+        onValueChange = { newTaskName = it.trimStart() },
+        label = { Text(stringResource(R.string.lbl_name)) })
+}
+
+@Composable
 fun NewTaskDialog(onDismissRequest: () -> Unit, onConfirmRequest: (String) -> Unit) {
-    var newTaskName by rememberSaveable { mutableStateOf("") }
-    val textFocusRequester = remember { FocusRequester() }
+    val newTaskNameState = rememberSaveable { mutableStateOf("") }
 
     Dialog(onDismissRequest = onDismissRequest) {
         Card(
@@ -426,13 +466,7 @@ fun NewTaskDialog(onDismissRequest: () -> Unit, onConfirmRequest: (String) -> Un
                     stringResource(R.string.cmd_create_new_task),
                     style = MaterialTheme.typography.titleLarge
                 )
-                OutlinedTextField(
-                    value = newTaskName,
-                    maxLines = 3,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    modifier = Modifier.focusRequester(textFocusRequester),
-                    onValueChange = { newTaskName = it.trimStart() },
-                    label = { Text(stringResource(R.string.lbl_name)) })
+                NameTextField(newTaskNameState = newTaskNameState, defaultFocus = true)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(32.dp),
                 ) {
@@ -442,16 +476,14 @@ fun NewTaskDialog(onDismissRequest: () -> Unit, onConfirmRequest: (String) -> Un
                         Text(stringResource(R.string.cmd_cancel))
                     }
                     TextButton(
-                        onClick = { onConfirmRequest(newTaskName.trim()) },
-                        enabled = newTaskName.trim().isNotEmpty(),
+                        onClick = { onConfirmRequest(newTaskNameState.value.trim()) },
+                        enabled = newTaskNameState.value.trim().isNotEmpty(),
                     ) {
                         Text(stringResource(R.string.cmd_create))
                     }
                 }
             }
         }
-
-        LaunchedEffect(Unit) { textFocusRequester.requestFocus() }
     }
 }
 
@@ -460,6 +492,50 @@ fun NewTaskDialog(onDismissRequest: () -> Unit, onConfirmRequest: (String) -> Un
 private fun PreviewNewTaskDialog() {
     NewTaskDialog(onDismissRequest = {}, onConfirmRequest = {})
 }
+
+@Composable
+fun EditTaskNameDialog(
+    oldName: String,
+    onDismissRequest: () -> Unit,
+    onConfirmRequest: (String) -> Unit
+) {
+    val newTaskNameState = rememberSaveable { mutableStateOf(oldName) }
+
+    Dialog(onDismissRequest = onDismissRequest) {
+        Card(
+            modifier = Modifier.padding(16.dp),
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    stringResource(R.string.cmd_edit_task),
+                    style = MaterialTheme.typography.titleLarge
+                )
+                NameTextField(newTaskNameState = newTaskNameState)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(32.dp),
+                ) {
+                    TextButton(
+                        onClick = onDismissRequest,
+                    ) {
+                        Text(stringResource(R.string.cmd_cancel))
+                    }
+                    TextButton(
+                        onClick = { onConfirmRequest(newTaskNameState.value.trim()) },
+                        enabled = newTaskNameState.value.trim()
+                            .let { it.isNotEmpty() && it != oldName },
+                    ) {
+                        Text(stringResource(R.string.cmd_save))
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 class TaskPreviewParameterProvider : PreviewParameterProvider<Task> {
     override val values: Sequence<Task>

@@ -8,6 +8,7 @@ import androidx.compose.ui.test.assertAny
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasAnyChild
 import androidx.compose.ui.test.hasClickAction
@@ -280,6 +281,106 @@ abstract class MainActivityTester {
                 waitForIdle()
             }
             assertEquals(task, runBlocking { TaskRepository.instance.getTask(task.id) })
+        }
+    }
+
+    @Test
+    fun testRenameTask() {
+        val origName = "task one"
+        val newName = "task two"
+        val task = runBlocking {
+            TaskRepository.instance.newTask(origName)
+        }
+        inActivity {
+            selectTaskByName(origName)
+            with(composeRule) {
+                onNode(hasAnyAncestor(isDetailsCard) and isButton(R.string.cmd_edit_task)).performClick()
+                onNode(hasAnyAncestor(isDialog()) and hasContentDescriptionExactly(getString(R.string.lbl_name))).run {
+                    assertTextEquals(getString(R.string.lbl_name), origName)
+                    performTextClearance()
+                    performTextInput(newName)
+                }
+                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_save)).performClick()
+                onNode(isDialog()).assertIsNotDisplayed()
+                assertDetailsCardVisible(newName)
+                getTaskItemByName(newName).assertExists()
+                waitForIdle()
+            }
+            assertEquals(
+                task.copy(name = newName),
+                runBlocking { TaskRepository.instance.getTask(task.id) })
+        }
+    }
+
+    @Test
+    fun testCancelRenameTask() {
+        val origName = "task one"
+        val newName = "task two"
+        val task = runBlocking {
+            TaskRepository.instance.newTask(origName)
+        }
+        inActivity {
+            selectTaskByName(origName)
+            with(composeRule) {
+                onNode(hasAnyAncestor(isDetailsCard) and isButton(R.string.cmd_edit_task)).performClick()
+                onNode(hasAnyAncestor(isDialog()) and hasContentDescriptionExactly(getString(R.string.lbl_name))).run {
+                    performTextClearance()
+                    performTextInput(newName)
+                }
+                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_cancel)).performClick()
+                onNode(isDialog()).assertIsNotDisplayed()
+                assertDetailsCardVisible(origName)
+                getTaskItemByName(origName).assertExists()
+                waitForIdle()
+            }
+            assertEquals(task, runBlocking { TaskRepository.instance.getTask(task.id) })
+        }
+    }
+
+    @Test
+    fun testRenameTaskTrimsWhitespace() {
+        val origName = "task one"
+        runBlocking {
+            TaskRepository.instance.newTask(origName)
+        }
+        inActivity {
+            selectTaskByName(origName)
+            with(composeRule) {
+                onNode(hasAnyAncestor(isDetailsCard) and isButton(R.string.cmd_edit_task)).performClick()
+                onNode(hasAnyAncestor(isDialog()) and hasContentDescriptionExactly(getString(R.string.lbl_name))).run {
+                    performTextClearance()
+                    performTextInput("   name  ")
+                }
+                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_save)).performClick()
+                onNode(isDialog()).assertIsNotDisplayed()
+                waitForIdle()
+            }
+            val tasks = TaskRepository.instance.tasks.value!!
+            assertEquals(1, tasks.size)
+            assertEquals("name", tasks.first().name)
+        }
+    }
+
+    @Test
+    fun testRefuseRenameTaskEmpty() {
+        val origName = "don't erase me"
+        runBlocking {
+            TaskRepository.instance.newTask(origName)
+        }
+        inActivity {
+            selectTaskByName(origName)
+            with(composeRule) {
+                onNode(hasAnyAncestor(isDetailsCard) and isButton(R.string.cmd_edit_task)).performClick()
+                onNode(hasAnyAncestor(isDialog()) and hasContentDescriptionExactly(getString(R.string.lbl_name))).run {
+                    performTextClearance()
+                }
+                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_save)).performClick()
+                getTaskItemByName(origName).assertExists()
+                waitForIdle()
+            }
+            val tasks = TaskRepository.instance.tasks.value!!
+            assertEquals(1, tasks.size)
+            assertEquals(origName, tasks.first().name)
         }
     }
 }
