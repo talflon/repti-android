@@ -13,9 +13,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.absolutePadding
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -47,6 +51,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -74,6 +79,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -87,6 +93,7 @@ import java.time.LocalDate
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
             val tasks by TaskRepository.instance.tasks.collectAsState()
             ReptiTheme(dynamicColor = false) {
@@ -134,6 +141,7 @@ fun MainUI(@PreviewParameter(TaskListPreviewParameterProvider::class) tasks: Lis
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(tasks: List<Task>) {
     val scope = rememberCoroutineScope()
@@ -159,7 +167,10 @@ fun MainScreen(tasks: List<Task>) {
                     )
                 }
             }
-        }
+        },
+        topBar = {
+            TopAppBar(title = { Text(stringResource(R.string.app_name)) })
+        },
     ) { innerPadding ->
         Box(Modifier.padding(innerPadding)) {
             LazyColumn(
@@ -196,12 +207,13 @@ fun MainScreen(tasks: List<Task>) {
             }
         }
 
-        if (selectedTaskId != null) {
-            TaskDetailCard(
-                task = tasks.first { it.id == selectedTaskId },
-                closeCard = { selectedTaskId = null },
-            )
-        }
+    }
+
+    if (selectedTaskId != null) {
+        TaskDetailCard(
+            task = tasks.first { it.id == selectedTaskId },
+            closeCard = { selectedTaskId = null },
+        )
     }
 
     if (openNewTaskDialog) {
@@ -304,7 +316,12 @@ fun TaskDetailCard(
         modifier = Modifier.semantics { contentDescription = cardContentDescription },
         onDismissRequest = closeCard,
     ) {
-        Column(Modifier.padding(8.dp)) {
+        val insetPadding = WindowInsets.safeDrawing.asPaddingValues()
+        Column(
+            Modifier
+                .absolutePadding(bottom = insetPadding.calculateBottomPadding())
+                .padding(8.dp)
+        ) {
             Row(
                 Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top,
