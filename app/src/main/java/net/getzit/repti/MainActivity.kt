@@ -86,6 +86,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.test.espresso.IdlingRegistry
 import androidx.test.espresso.idling.CountingIdlingResource
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import net.getzit.repti.ui.theme.ReptiTheme
 import java.time.LocalDate
@@ -112,22 +113,25 @@ val idlingResource = CountingIdlingResource("MainActivity", true).also {
     IdlingRegistry.getInstance().register(it)
 }
 
-inline fun CoroutineScope.launchIdling(crossinline block: suspend CoroutineScope.() -> Unit) {
+inline fun CoroutineScope.launchIdling(crossinline block: suspend CoroutineScope.() -> Unit): Job {
     idlingResource.increment()
-    var launched = false
+    var job: Job? = null
     try {
-        launch {
+        job = launch {
             try {
                 block()
             } finally {
                 idlingResource.decrement()
             }
         }
-        launched = true
+        return job
     } finally {
-        if (!launched) idlingResource.decrement()
+        if (job == null) idlingResource.decrement()
     }
 }
+
+inline fun CoroutineScope.launchTaskRepository(crossinline block: suspend TaskRepository.() -> Unit): Job =
+    launchIdling { TaskRepository.instance.run { block() } }
 
 @Preview(name = "Light Mode", showBackground = true)
 @Preview(name = "Dark Mode", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
@@ -220,9 +224,7 @@ fun MainScreen(tasks: List<Task>) {
         NewTaskDialog(
             onDismissRequest = { openNewTaskDialog = false },
             onConfirmRequest = { name ->
-                scope.launchIdling {
-                    TaskRepository.instance.newTask(name)
-                }
+                scope.launchTaskRepository { newTask(name) }
                 openNewTaskDialog = false
             },
         )
@@ -291,8 +293,8 @@ fun TaskListItem(
             Text(text = formatDone(task.done), style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.width(8.dp))
             Button(onClick = {
-                scope.launchIdling {
-                    TaskRepository.instance.update(task.copy(done = Day.today()))
+                scope.launchTaskRepository {
+                    update(task.copy(done = Day.today()))
                 }
             }) {
                 Icon(Icons.Rounded.Done, stringResource(R.string.cmd_mark_task_done))
@@ -357,8 +359,8 @@ fun TaskDetailCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Button(onClick = {
-                    scope.launchIdling {
-                        TaskRepository.instance.update(task.copy(done = null))
+                    scope.launchTaskRepository {
+                        update(task.copy(done = null))
                     }
                 }) {
                     Icon(
@@ -368,8 +370,8 @@ fun TaskDetailCard(
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 Button(onClick = {
-                    scope.launchIdling {
-                        TaskRepository.instance.update(task.copy(done = task.done!!.minusDays(1)))
+                    scope.launchTaskRepository {
+                        update(task.copy(done = task.done!!.minusDays(1)))
                     }
                 }, enabled = task.done != null) {
                     Icon(
@@ -384,8 +386,8 @@ fun TaskDetailCard(
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 Button(onClick = {
-                    scope.launchIdling {
-                        TaskRepository.instance.update(task.copy(done = task.done!!.plusDays(1)))
+                    scope.launchTaskRepository {
+                        update(task.copy(done = task.done!!.plusDays(1)))
                     }
                 }, enabled = task.done != null && task.done < Day.today()) {
                     Icon(
@@ -410,11 +412,7 @@ fun TaskDetailCard(
             onDismissRequest = { openDeleteDialog = false },
             confirmButton = {
                 TextButton(
-                    onClick = {
-                        scope.launchIdling {
-                            TaskRepository.instance.delete(task)
-                        }
-                    },
+                    onClick = { scope.launchTaskRepository { delete(task) } },
                 ) {
                     Text(stringResource(R.string.cmd_delete))
                 }
@@ -433,8 +431,8 @@ fun TaskDetailCard(
             onDismissRequest = { openEditDialog = false },
             onConfirmRequest = {
                 openEditDialog = false
-                scope.launchIdling {
-                    TaskRepository.instance.update(task.copy(name = it))
+                scope.launchTaskRepository {
+                    update(task.copy(name = it))
                 }
             })
     }
