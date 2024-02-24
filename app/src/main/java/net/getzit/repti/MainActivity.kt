@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
@@ -48,9 +50,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -178,6 +183,8 @@ fun MainScreen(tasks: List<Task>) {
         Box(Modifier.padding(innerPadding)) {
             LazyColumn(
                 state = listState,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues.Absolute(left = 8.dp, right = 8.dp),
             ) {
                 items(items = tasks, key = { it.id.string }) { task ->
                     TaskListItem(
@@ -243,12 +250,8 @@ fun LoadingScreen() {
     }
 }
 
-fun formatDone(day: Day?): String =
-    if (day == null) {
-        "—"
-    } else {
-        Day.today().daysAfter(day).toString()
-    }
+fun formatDone(day: Day): String =
+    Day.today().daysAfter(day).let { if (it == 0) "" else it.toString() }
 
 @Composable
 @ReadOnlyComposable
@@ -263,6 +266,7 @@ fun formatDoneLong(day: Day?): String =
         }
     }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskListItem(
     task: Task,
@@ -270,33 +274,50 @@ fun TaskListItem(
     onClick: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
+    val swipeState = rememberSwipeToDismissBoxState()
+    if (swipeState.currentValue == SwipeToDismissBoxValue.StartToEnd) {
+        scope.launchTaskRepository {
+            update(task.copy(done = Day.today()))
+            swipeState.snapTo(SwipeToDismissBoxValue.Settled)
+        }
+    }
 
-    Row(
-        Modifier
-            .padding(8.dp)
-            .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background)
-            .selectable(
-                selected = selected,
-                onClick = onClick,
-            ),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = task.name,
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.weight(1f)
-        )
-        Spacer(Modifier.width(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = formatDone(task.done), style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.width(8.dp))
-            Button(onClick = {
-                scope.launchTaskRepository {
-                    update(task.copy(done = Day.today()))
+    SwipeToDismissBox(
+        state = swipeState,
+        enableDismissFromEndToStart = false,
+        backgroundContent = {
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.secondary))
+        }) {
+        Row(
+            Modifier
+                .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background)
+                .height(24.dp)
+                .selectable(
+                    selected = selected,
+                    onClick = onClick,
+                ),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = task.name,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
+            )
+            if (task.done != null) {
+                Spacer(Modifier.width(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = formatDone(task.done),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Icon(
+                        Icons.Rounded.Done,
+                        stringResource(R.string.lbl_done),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
-            }) {
-                Icon(Icons.Rounded.Done, stringResource(R.string.cmd_mark_task_done))
             }
         }
     }
@@ -407,7 +428,9 @@ fun PreviewTaskDetailCard(@PreviewParameter(TaskPreviewParameterProvider::class)
 fun TaskDoneQuickSetter(@PreviewParameter(TaskPreviewParameterProvider::class) task: Task) {
     val scope = rememberCoroutineScope()
     Row(
-        Modifier.fillMaxWidth().padding(8.dp),
+        Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {

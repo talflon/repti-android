@@ -23,6 +23,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeRight
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.runBlocking
@@ -399,6 +401,21 @@ abstract class MainActivityTester {
             val tasks = TaskRepository.instance.tasks.value!!
             assertEquals(1, tasks.size)
             assertEquals(origName, tasks.first().name)
+        }
+    }
+
+    @Test
+    fun testSetDoneTodayWithSwipe() {
+        val taskName = "swipe me"
+        val taskId = runBlocking {
+            TaskRepository.instance.newTask(taskName).id
+        }
+        inActivity {
+            getTaskItemByName(taskName).performTouchInput { swipeRight() }
+            composeRule.waitForIdle()
+            assertEquals(
+                Day.today() as Day?,
+                runBlocking { TaskRepository.instance.getTask(taskId)!!.done })
         }
     }
 }
