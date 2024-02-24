@@ -190,10 +190,28 @@ abstract class MainActivityTester {
         inActivity {
             selectTaskByName(taskName)
             with(composeRule) {
-                onNode(hasAnyAncestor(isDetailsCard) and isButton(R.string.cmd_clear_day_done)).performClick()
+                onNode(hasAnyAncestor(isDetailsCard) and isButton(R.string.cmd_clear)).performClick()
                 waitForIdle()
             }
             assertEquals(null, runBlocking { TaskRepository.instance.getTask(taskId)!!.done })
+        }
+    }
+
+    @Test
+    fun testSetDoneTodayInDetails() {
+        val taskName = "TASK"
+        val taskId = runBlocking {
+            TaskRepository.instance.newTask(taskName).id
+        }
+        inActivity {
+            selectTaskByName(taskName)
+            with(composeRule) {
+                onNode(hasAnyAncestor(isDetailsCard) and isButton(R.string.cmd_done_today)).performClick()
+                waitForIdle()
+            }
+            assertEquals(
+                Day.today() as Day?,
+                runBlocking { TaskRepository.instance.getTask(taskId)!!.done })
         }
     }
 

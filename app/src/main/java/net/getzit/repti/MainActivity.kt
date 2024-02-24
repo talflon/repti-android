@@ -28,10 +28,9 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.ArrowForward
-import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.Edit
@@ -340,7 +339,7 @@ fun TaskDetailCard(
                 Text(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(4.dp),
+                        .padding(8.dp),
                     text = task.name,
                     style = MaterialTheme.typography.titleLarge
                 )
@@ -354,48 +353,7 @@ fun TaskDetailCard(
                 }
             }
             HorizontalDivider()
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Button(onClick = {
-                    scope.launchTaskRepository {
-                        update(task.copy(done = null))
-                    }
-                }) {
-                    Icon(
-                        Icons.Rounded.Clear,
-                        contentDescription = stringResource(R.string.cmd_clear_day_done)
-                    )
-                }
-                Spacer(modifier = Modifier.weight(1f))
-                Button(onClick = {
-                    scope.launchTaskRepository {
-                        update(task.copy(done = task.done!!.minusDays(1)))
-                    }
-                }, enabled = task.done != null) {
-                    Icon(
-                        Icons.Rounded.ArrowBack,
-                        contentDescription = stringResource(R.string.cmd_done_previous_day)
-                    )
-                }
-                Text(
-                    modifier = Modifier.weight(2f),
-                    textAlign = TextAlign.Center,
-                    text = formatDoneLong(day = task.done),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                Button(onClick = {
-                    scope.launchTaskRepository {
-                        update(task.copy(done = task.done!!.plusDays(1)))
-                    }
-                }, enabled = task.done != null && task.done < Day.today()) {
-                    Icon(
-                        Icons.Rounded.ArrowForward,
-                        contentDescription = stringResource(R.string.cmd_done_next_day)
-                    )
-                }
-            }
+            TaskDoneQuickSetter(task)
         }
     }
 
@@ -442,6 +400,59 @@ fun TaskDetailCard(
 @Composable
 fun PreviewTaskDetailCard(@PreviewParameter(TaskPreviewParameterProvider::class) task: Task) {
     TaskDetailCard(task = task, closeCard = {})
+}
+
+@Preview
+@Composable
+fun TaskDoneQuickSetter(@PreviewParameter(TaskPreviewParameterProvider::class) task: Task) {
+    val scope = rememberCoroutineScope()
+    Row(
+        Modifier.fillMaxWidth().padding(8.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Button(onClick = {
+            scope.launchTaskRepository {
+                update(task.copy(done = task.done!!.minusDays(1)))
+            }
+        }, enabled = task.done != null) {
+            Icon(
+                Icons.AutoMirrored.Rounded.ArrowBack,
+                contentDescription = stringResource(R.string.cmd_done_previous_day)
+            )
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            TextButton(onClick = {
+                scope.launchTaskRepository {
+                    update(task.copy(done = Day.today()))
+                }
+            }, enabled = task.done != Day.today()) {
+                Text(stringResource(R.string.cmd_done_today))
+            }
+            Text(
+                textAlign = TextAlign.Center,
+                text = formatDoneLong(day = task.done),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            TextButton(onClick = {
+                scope.launchTaskRepository {
+                    update(task.copy(done = null))
+                }
+            }, enabled = task.done != null) {
+                Text(stringResource(R.string.cmd_clear))
+            }
+        }
+        Button(onClick = {
+            scope.launchTaskRepository {
+                update(task.copy(done = task.done!!.plusDays(1)))
+            }
+        }, enabled = task.done != null && task.done < Day.today()) {
+            Icon(
+                Icons.AutoMirrored.Rounded.ArrowForward,
+                contentDescription = stringResource(R.string.cmd_done_next_day)
+            )
+        }
+    }
 }
 
 @Composable
