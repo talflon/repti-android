@@ -6,8 +6,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,6 +36,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import net.getzit.repti.Day
 import net.getzit.repti.R
@@ -117,12 +119,15 @@ fun TaskListItem(
         state = swipeState,
         enableDismissFromEndToStart = false,
         backgroundContent = {
-            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.secondary))
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.secondary))
         }) {
         Row(
             Modifier
                 .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background)
-                .height(24.dp)
+                .defaultMinSize(minHeight = 24.dp)
                 .selectable(
                     selected = selected,
                     onClick = onClick,
@@ -132,7 +137,7 @@ fun TaskListItem(
         ) {
             Text(
                 text = task.name,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.weight(1f)
             )
             if (task.done != null) {
@@ -142,7 +147,7 @@ fun TaskListItem(
                         text = formatDoneDaysAgo(task.done),
                         style = MaterialTheme.typography.labelMedium
                     )
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(4.dp))
                     Icon(
                         Icons.Rounded.Done,
                         stringResource(R.string.lbl_done),
@@ -153,6 +158,15 @@ fun TaskListItem(
         }
     }
 }
+
+@Preview
+@Composable
+fun PreviewTaskListItem(
+    @PreviewParameter(TaskPreviewParameterProvider::class) task: Task,
+) {
+    TaskListItem(task = task, selected = false, onClick = {})
+}
+
 
 fun formatDoneDaysAgo(day: Day): String =
     Day.today().daysAfter(day).let { if (it == 0) "" else it.toString() }
