@@ -11,7 +11,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 import net.getzit.repti.ui.MainUI
-import net.getzit.repti.ui.theme.ReptiTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,9 +18,7 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
             val tasks by TaskRepository.instance.tasks.collectAsState()
-            ReptiTheme(dynamicColor = false) {
-                MainUI(tasks)
-            }
+            MainUI(tasks)
         }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {

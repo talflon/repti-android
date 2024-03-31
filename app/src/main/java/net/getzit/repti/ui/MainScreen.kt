@@ -1,6 +1,6 @@
 package net.getzit.repti.ui
 
-import android.content.res.Configuration
+import android.content.res.Configuration.UI_MODE_NIGHT_YES
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
@@ -35,16 +35,18 @@ import androidx.compose.ui.window.Dialog
 import net.getzit.repti.R
 import net.getzit.repti.Task
 import net.getzit.repti.TaskId
+import net.getzit.repti.ui.theme.ReptiTheme
 
-@Preview(name = "Light Mode", showBackground = true)
-@Preview(name = "Dark Mode", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
-@Preview(name = "Full Preview", showSystemUi = true)
+@Preview(name = "Light Mode", showBackground = true, showSystemUi = true)
+@Preview(name = "Dark Mode", uiMode = UI_MODE_NIGHT_YES, showBackground = true, showSystemUi = true)
 @Composable
 fun MainUI(@PreviewParameter(TaskListPreviewParameterProvider::class) tasks: List<Task>?) {
-    if (tasks != null) {
-        MainScreen(tasks)
-    } else {
-        LoadingScreen()
+    ReptiTheme(dynamicColor = false) {
+        if (tasks != null) {
+            MainScreen(tasks)
+        } else {
+            LoadingScreen()
+        }
     }
 }
 
