@@ -2,7 +2,7 @@
 androidGradlePlugin = "8.3.1"
 kotlin = "1.9.22"
 dokka = "1.9.10"
-composeBom = "2024.02.00"
+composeBom = "2024.03.00"
 activityCompose = "1.8.2"
 appcompat = "1.6.1"
 desugar_jdk_libs = "2.0.4"
