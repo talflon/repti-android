@@ -12,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "net.getzit.repti"
-        minSdk = 23
+        minSdk = 21
         targetSdk = 34
         versionCode = 1
         versionName = "0.1"
