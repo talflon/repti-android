@@ -1,6 +1,6 @@
 plugins {
-    id("com.android.library")
-    id("org.jetbrains.kotlin.android")
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
 }
 
 android {
@@ -22,9 +22,8 @@ android {
 
 dependencies {
     compileOnly(project(":app"))
-    implementation("junit:junit:4.13.2")
-    implementation("androidx.test.espresso:espresso-core:3.5.1")
-    val composeBom = platform("androidx.compose:compose-bom:2024.02.00")
-    implementation(composeBom)
-    implementation("androidx.compose.ui:ui-test-junit4")
+    implementation(libs.junit)
+    implementation(libs.androidx.espresso.core)
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui.test.junit4)
 }

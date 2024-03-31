@@ -1,9 +1,9 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.serialization")
-    id("org.jetbrains.kotlin.plugin.parcelize")
-    id("org.jetbrains.dokka")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotlin.parcelize)
+    alias(libs.plugins.dokka)
 }
 
 android {
@@ -50,35 +50,35 @@ android {
 }
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("com.google.android.material:material:1.11.0")
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("io.kotest:kotest-property:5.8.0")
-    testImplementation("org.skyscreamer:jsonassert:1.5.1")
-    dokkaPlugin("org.jetbrains.dokka:android-documentation-plugin:1.9.10")
+    coreLibraryDesugaring(libs.android.desugar)
+    implementation(libs.androidx.ktx)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.android.material)
+    testImplementation(libs.junit)
+    testImplementation(libs.kotest.property)
+    testImplementation(libs.jsonassert)
+    dokkaPlugin(libs.dokka.android)
 
-    val composeBom = platform("androidx.compose:compose-bom:2024.02.00")
+    val composeBom = platform(libs.compose.bom)
     for (lib in sequenceOf(
         composeBom,
-        "androidx.test.espresso:espresso-core:3.5.1",
-        "androidx.compose.ui:ui-test-junit4",
+        libs.androidx.espresso.core,
+        libs.compose.ui.test.junit4,
         project(":shared-test"),
     )) {
         testImplementation(lib)
         androidTestImplementation(lib)
     }
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
-    testImplementation("org.robolectric:robolectric:4.11.1")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    androidTestImplementation(libs.androidx.junit)
 
     implementation(composeBom)
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.activity:activity-compose:1.8.2")
-    implementation("androidx.test.espresso:espresso-idling-resource:3.5.1")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    implementation(libs.compose.material3)
+    implementation(libs.compose.ui.tooling.preview)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.espresso.idling.resource)
+    debugImplementation(libs.compose.ui.tooling)
+    debugImplementation(libs.compose.ui.test.manifest)
 }
