@@ -56,12 +56,36 @@ abstract class MainActivityTester {
         return hasClickAction() and (hasContentDescriptionExactly(cmd) or hasTextExactly(cmd))
     }
 
+    private fun isInMenu() =
+        hasAnyAncestor(hasContentDescriptionExactly(getString(R.string.lbl_menu)))
+
+    private fun isNotInMenu() = isInMenu().not()
+
     @Test
-    fun testCreateNewTask() {
+    fun testCreateNewTaskFromFAB() {
         val taskName = "the name"
         inActivity {
             with(composeRule) {
-                onNode(isButton(R.string.cmd_create_new_task)).performClick()
+                onNode(isButton(R.string.cmd_create_new_task) and isNotInMenu()).performClick()
+                onNode(isDialog()).assertIsDisplayed()
+                onNode(hasAnyAncestor(isDialog()) and isFocused()).performTextInput(taskName)
+                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_create)).performClick()
+                onNode(isDialog()).assertIsNotDisplayed()
+                waitForIdle()
+            }
+            val tasks = TaskRepository.instance.tasks.value!!
+            assertEquals(1, tasks.size)
+            assertEquals(taskName, tasks.first().name)
+        }
+    }
+
+    @Test
+    fun testCreateNewTaskFromMenu() {
+        val taskName = "from the menu!"
+        inActivity {
+            with(composeRule) {
+                onNode(isButton(R.string.cmd_menu)).performClick()
+                onNode(isButton(R.string.cmd_create_new_task) and isInMenu()).performClick()
                 onNode(isDialog()).assertIsDisplayed()
                 onNode(hasAnyAncestor(isDialog()) and isFocused()).performTextInput(taskName)
                 onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_create)).performClick()
@@ -78,7 +102,7 @@ abstract class MainActivityTester {
     fun testCreateNewTaskTrimsWhitespace() {
         inActivity {
             with(composeRule) {
-                onNode(isButton(R.string.cmd_create_new_task)).performClick()
+                onNode(isButton(R.string.cmd_create_new_task) and isNotInMenu()).performClick()
                 onNode(isDialog()).assertIsDisplayed()
                 onNode(hasAnyAncestor(isDialog()) and isFocused()).performTextInput("  name   ")
                 onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_create)).performClick()
@@ -94,7 +118,7 @@ abstract class MainActivityTester {
     @Test
     fun testCancelNewTask(): Unit = inActivity {
         with(composeRule) {
-            onNode(isButton(R.string.cmd_create_new_task)).performClick()
+            onNode(isButton(R.string.cmd_create_new_task) and isNotInMenu()).performClick()
             onNode(isDialog()).assertIsDisplayed()
             onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_cancel)).performClick()
             onNode(isDialog()).assertIsNotDisplayed()
@@ -105,7 +129,7 @@ abstract class MainActivityTester {
     fun testRefuseCreateUnnamedTask() {
         inActivity {
             with(composeRule) {
-                onNode(isButton(R.string.cmd_create_new_task)).performClick()
+                onNode(isButton(R.string.cmd_create_new_task) and isNotInMenu()).performClick()
                 onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_create)).performClick()
                 waitForIdle()
             }
@@ -117,7 +141,7 @@ abstract class MainActivityTester {
     fun testRefuseCreateTaskNameCleared() {
         inActivity {
             with(composeRule) {
-                onNode(isButton(R.string.cmd_create_new_task)).performClick()
+                onNode(isButton(R.string.cmd_create_new_task) and isNotInMenu()).performClick()
                 onNode(hasAnyAncestor(isDialog()) and isFocused()).performTextInput("blah blah")
                 onNode(hasAnyAncestor(isDialog()) and isFocused()).performTextClearance()
                 onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_create)).performClick()
