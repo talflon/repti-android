@@ -145,6 +145,11 @@ fun MainMenu(startNewTask: () -> Unit) {
             selected = false,
             onClick = startNewTask,
         )
+        NavigationDrawerItem(
+            label = { Text(stringResource(R.string.cmd_save_backup)) },
+            selected = false,
+            onClick = rememberSaveBackup(),
+        )
     }
 }
 

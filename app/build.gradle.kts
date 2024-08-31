@@ -72,6 +72,7 @@ dependencies {
     }
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.espresso.intents)
     androidTestImplementation(libs.androidx.junit)
 
     implementation(composeBom)

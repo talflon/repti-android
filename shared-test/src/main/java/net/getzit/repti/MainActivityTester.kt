@@ -51,15 +51,15 @@ abstract class MainActivityTester {
         TaskRepository.instance = TaskRepository.create(VarStorage(""))
     }
 
-    private fun isButton(@StringRes id: Int): SemanticsMatcher {
+    protected fun isButton(@StringRes id: Int): SemanticsMatcher {
         val cmd = getString(id)
         return hasClickAction() and (hasContentDescriptionExactly(cmd) or hasTextExactly(cmd))
     }
 
-    private fun isInMenu() =
+    protected fun isInMenu() =
         hasAnyAncestor(hasContentDescriptionExactly(getString(R.string.lbl_menu)))
 
-    private fun isNotInMenu() = isInMenu().not()
+    protected fun isNotInMenu() = isInMenu().not()
 
     @Test
     fun testCreateNewTaskFromFAB() {
@@ -328,6 +328,7 @@ abstract class MainActivityTester {
         }
     }
 
+    // TODO appears to have spurious errors
     @Test
     fun testRenameTask() {
         val origName = "task one"

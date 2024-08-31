@@ -82,7 +82,10 @@ class TaskRepository(
 
     suspend fun getTask(id: TaskId) = withDataset { it.getTask(id) }
 
+    suspend fun getBackup(): String = withDataset { dataset.toString() }
+
     companion object {
+        const val BACKUP_MIME_TYPE = "application/x.repti.backup+json"
         lateinit var instance: TaskRepository
 
         fun create(
