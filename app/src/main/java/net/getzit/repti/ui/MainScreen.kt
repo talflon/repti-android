@@ -77,7 +77,6 @@ fun MainScreen(tasks: List<Task>) {
         drawerState = drawerState,
         drawerContent = {
             MainMenu(startNewTask = {
-                scope.launch { drawerState.close() }
                 openNewTaskDialog = true
             })
         },
