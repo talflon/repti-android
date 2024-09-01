@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,7 +21,8 @@ import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -44,6 +46,7 @@ import net.getzit.repti.R
 import net.getzit.repti.Task
 import net.getzit.repti.TaskId
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskList(modifier: Modifier = Modifier, tasks: List<Task>) {
     var selectedTaskId: TaskId? by rememberSaveable { mutableStateOf(null) }
@@ -73,7 +76,7 @@ fun TaskList(modifier: Modifier = Modifier, tasks: List<Task>) {
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.75f))
+                    .background(colorScheme.surface.copy(alpha = 0.75f))
                     .alpha(0.75f),
             )
         }
@@ -84,7 +87,7 @@ fun TaskList(modifier: Modifier = Modifier, tasks: List<Task>) {
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.75f))
+                    .background(colorScheme.surface.copy(alpha = 0.75f))
                     .alpha(0.75f),
             )
         }
@@ -118,16 +121,13 @@ fun TaskListItem(
     SwipeToDismissBox(
         state = swipeState,
         enableDismissFromEndToStart = false,
-        backgroundContent = {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.secondary))
-        }) {
+        backgroundContent = { Box(Modifier.fillMaxSize().background(colorScheme.secondary)) }
+    ) {
         Row(
             Modifier
-                .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background)
+                .background(if (selected) colorScheme.secondaryContainer else colorScheme.background)
                 .defaultMinSize(minHeight = 24.dp)
+                .padding(4.dp)
                 .selectable(
                     selected = selected,
                     onClick = onClick,
@@ -137,7 +137,7 @@ fun TaskListItem(
         ) {
             Text(
                 text = task.name,
-                style = MaterialTheme.typography.titleLarge,
+                style = typography.headlineMedium,
                 modifier = Modifier.weight(1f)
             )
             if (task.done != null) {
@@ -145,13 +145,13 @@ fun TaskListItem(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = formatDoneDaysAgo(task.done),
-                        style = MaterialTheme.typography.labelMedium
+                        style = typography.labelLarge
                     )
                     Spacer(Modifier.width(4.dp))
                     Icon(
                         Icons.Rounded.Done,
                         stringResource(R.string.lbl_done),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = colorScheme.primary
                     )
                 }
             }

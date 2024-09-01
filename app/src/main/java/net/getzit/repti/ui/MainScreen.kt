@@ -1,6 +1,7 @@
 package net.getzit.repti.ui
 
 import android.content.res.Configuration.UI_MODE_NIGHT_YES
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DrawerValue
@@ -18,13 +20,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -36,6 +39,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -103,8 +107,8 @@ fun MainScreen(tasks: List<Task>) {
                 CenterAlignedTopAppBar(
                     title = { Text(stringResource(R.string.app_name)) },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        titleContentColor = MaterialTheme.colorScheme.primary,
+                        containerColor = colorScheme.primaryContainer,
+                        titleContentColor = colorScheme.primary,
                     ),
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
@@ -142,24 +146,27 @@ fun MainMenu(startNewTask: () -> Unit, loadBackupDialogState: MutableState<Strin
         Text(
             modifier = Modifier.padding(16.dp),
             text = stringResource(R.string.app_name),
-            style = MaterialTheme.typography.titleSmall,
+            style = typography.titleSmall,
         )
-        NavigationDrawerItem(
-            label = { Text(stringResource(R.string.cmd_create_new_task)) },
-            selected = false,
-            onClick = startNewTask,
-        )
-        NavigationDrawerItem(
-            label = { Text(stringResource(R.string.cmd_save_backup)) },
-            selected = false,
-            onClick = rememberSaveBackup(),
-        )
-        NavigationDrawerItem(
-            label = { Text(stringResource(R.string.cmd_load_backup)) },
-            selected = false,
-            onClick = rememberLoadBackup(loadBackupDialogState),
-        )
+        MenuItem(startNewTask, R.string.cmd_create_new_task, icon = Icons.Rounded.Add)
+        MenuItem(rememberSaveBackup(), R.string.cmd_save_backup)
+        MenuItem(rememberLoadBackup(loadBackupDialogState), R.string.cmd_load_backup)
     }
+}
+
+@Composable
+fun MenuItem(onClick: () -> Unit, labelText: String, icon: ImageVector? = null) {
+    NavigationDrawerItem(
+        label = { Text(labelText) },
+        selected = false,
+        onClick = onClick,
+        icon = { if (icon != null) Icon(icon, contentDescription = null) },
+    )
+}
+
+@Composable
+fun MenuItem(onClick: () -> Unit, @StringRes labelText: Int, icon: ImageVector? = null) {
+    MenuItem(onClick, stringResource(labelText), icon)
 }
 
 @Preview
@@ -183,18 +190,14 @@ fun NewTaskDialog(onDismissRequest: () -> Unit, onConfirmRequest: (String) -> Un
             ) {
                 Text(
                     stringResource(R.string.cmd_create_new_task),
-                    style = MaterialTheme.typography.titleLarge
+                    style = typography.titleLarge
                 )
                 NameTextField(newTaskNameState = newTaskNameState, defaultFocus = true)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(32.dp),
                 ) {
-                    TextButton(
-                        onClick = onDismissRequest,
-                    ) {
-                        Text(stringResource(R.string.cmd_cancel))
-                    }
-                    TextButton(
+                    OutlinedButton(onDismissRequest) { Text(stringResource(R.string.cmd_cancel)) }
+                    Button(
                         onClick = { onConfirmRequest(newTaskNameState.value.trim()) },
                         enabled = newTaskNameState.value.trim().isNotEmpty(),
                     ) {

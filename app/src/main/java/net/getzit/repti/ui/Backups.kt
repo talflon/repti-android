@@ -12,11 +12,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme.typography
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -185,11 +186,7 @@ fun LoadBackupDialog(
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        TextButton(
-                            onClick = onSynchronizeRequest,
-                        ) {
-                            Text(stringResource(R.string.cmd_synchronize))
-                        }
+                        Button(onSynchronizeRequest) { Text(stringResource(R.string.cmd_synchronize)) }
                         Text(
                             stringResource(R.string.msg_backup_explain_synchronize),
                             style = typography.bodySmall
@@ -198,11 +195,7 @@ fun LoadBackupDialog(
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        TextButton(
-                            onClick = onReplaceRequest,
-                        ) {
-                            Text(stringResource(R.string.cmd_replace))
-                        }
+                        Button(onReplaceRequest) { Text(stringResource(R.string.cmd_replace)) }
                         Text(
                             stringResource(R.string.msg_backup_explain_replace),
                             style = typography.bodySmall
@@ -222,11 +215,7 @@ fun LoadBackupDialog(
                             style = typography.bodyLarge
                         )
                     }
-                    TextButton(
-                        onClick = onDismissRequest,
-                    ) {
-                        Text(stringResource(R.string.cmd_cancel))
-                    }
+                    OutlinedButton(onDismissRequest) { Text(stringResource(R.string.cmd_cancel)) }
                 }
             }
         }

@@ -3,12 +3,8 @@ package net.getzit.repti.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.absolutePadding
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
@@ -20,10 +16,13 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +48,7 @@ import net.getzit.repti.Task
 fun TaskDetailSheet(
     task: Task,
     onDismiss: () -> Unit,
+    sheetState: SheetState = rememberModalBottomSheetState(),
 ) {
     val scope = rememberCoroutineScope()
     val sheetContentDescription = stringResource(R.string.lbl_more_information_for_task)
@@ -57,20 +57,18 @@ fun TaskDetailSheet(
 
     ModalBottomSheet(
         modifier = Modifier.semantics { contentDescription = sheetContentDescription },
+        sheetState = sheetState,
         onDismissRequest = onDismiss,
     ) {
-        val insetPadding = WindowInsets.safeDrawing.asPaddingValues()
         Column(
-            Modifier
-                .absolutePadding(bottom = insetPadding.calculateBottomPadding())
-                .padding(8.dp)
+            Modifier.padding(8.dp)
         ) {
             Row(
                 Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Button(onClick = {
+                OutlinedButton(onClick = {
                     openDeleteDialog = true
                 }) {
                     Icon(
@@ -83,7 +81,7 @@ fun TaskDetailSheet(
                         .weight(1f)
                         .padding(8.dp),
                     text = task.name,
-                    style = MaterialTheme.typography.titleLarge
+                    style = typography.headlineLarge
                 )
                 Button(onClick = {
                     openEditDialog = true
@@ -111,14 +109,14 @@ fun TaskDetailSheet(
             text = { Text(stringResource(R.string.dsc_delete)) },
             onDismissRequest = { openDeleteDialog = false },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = { scope.launchTaskRepository { delete(task) } },
                 ) {
                     Text(stringResource(R.string.cmd_delete))
                 }
             },
             dismissButton = {
-                TextButton(
+                OutlinedButton(
                     onClick = { openDeleteDialog = false },
                 ) {
                     Text(stringResource(R.string.cmd_cancel))
@@ -138,10 +136,15 @@ fun TaskDetailSheet(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 fun PreviewTaskDetailSheet(@PreviewParameter(TaskPreviewParameterProvider::class) task: Task) {
-    TaskDetailSheet(task = task, onDismiss = {})
+    TaskDetailSheet(
+        task = task,
+        onDismiss = {},
+        sheetState = rememberStandardBottomSheetState(skipHiddenState = false)
+    )
 }
 
 @Preview
@@ -166,7 +169,7 @@ fun TaskDoneQuickSetter(@PreviewParameter(TaskPreviewParameterProvider::class) t
             )
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            TextButton(onClick = {
+            Button(onClick = {
                 scope.launchTaskRepository {
                     update(task.copy(done = Day.today()))
                 }
@@ -176,9 +179,9 @@ fun TaskDoneQuickSetter(@PreviewParameter(TaskPreviewParameterProvider::class) t
             Text(
                 textAlign = TextAlign.Center,
                 text = formatDoneWhen(day = task.done),
-                style = MaterialTheme.typography.bodyLarge,
+                style = typography.bodyLarge,
             )
-            TextButton(onClick = {
+            Button(onClick = {
                 scope.launchTaskRepository {
                     update(task.copy(done = null))
                 }
@@ -218,18 +221,18 @@ fun EditTaskNameDialog(
             ) {
                 Text(
                     stringResource(R.string.cmd_edit_task),
-                    style = MaterialTheme.typography.titleLarge
+                    style = typography.titleLarge
                 )
                 NameTextField(newTaskNameState = newTaskNameState)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(32.dp),
                 ) {
-                    TextButton(
+                    OutlinedButton(
                         onClick = onDismissRequest,
                     ) {
                         Text(stringResource(R.string.cmd_cancel))
                     }
-                    TextButton(
+                    Button(
                         onClick = { onConfirmRequest(newTaskNameState.value.trim()) },
                         enabled = newTaskNameState.value.trim()
                             .let { it.isNotEmpty() && it != oldName },
