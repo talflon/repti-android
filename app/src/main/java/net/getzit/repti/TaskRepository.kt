@@ -27,21 +27,25 @@ class TaskRepository(
     private val _tasks: MutableStateFlow<List<Task>?> = MutableStateFlow(null)
     val tasks: StateFlow<List<Task>?> get() = _tasks
 
+    private fun onDatasetUpdate(dataset: Dataset?) {
+        _tasks.value = dataset?.allTasks?.toList()
+    }
+
     private suspend inline fun <T> withDataset(crossinline run: suspend (Dataset) -> T): T =
         externalScope.async {
             datasetMutex.withLock {
                 run(dataset ?: localSource.load().also {
                     dataset = it
-                    _tasks.value = it.allTasks.toList()
+                    onDatasetUpdate(it)
                 })
             }
         }.await()
 
     private suspend inline fun <T> modifyDataset(crossinline run: suspend (Dataset) -> T): T =
-        withDataset { dataset ->
-            run(dataset).also {
-                localSource.save(dataset)
-                _tasks.value = dataset.allTasks.toList()
+        withDataset {
+            run(it).also {
+                dataset?.apply { localSource.save(this) }
+                onDatasetUpdate(dataset)
             }
         }
 
@@ -82,7 +86,21 @@ class TaskRepository(
 
     suspend fun getTask(id: TaskId) = withDataset { it.getTask(id) }
 
-    suspend fun getBackup(): String = withDataset { dataset.toString() }
+    suspend fun getBackup(): String = withDataset { it.toString() }
+
+    suspend fun replaceWithBackup(backup: String) {
+        val backupDataset = Dataset.fromString(backup)
+        modifyDataset {
+            this.dataset = backupDataset
+        }
+    }
+
+    suspend fun mergeFromBackup(backup: String) {
+        val backupDataset = Dataset.fromString(backup)
+        modifyDataset {
+            it.updateFrom(backupDataset)
+        }
+    }
 
     companion object {
         const val BACKUP_MIME_TYPE = "application/x.repti.backup+json"

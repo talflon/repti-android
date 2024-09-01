@@ -46,4 +46,26 @@ class TaskRepositoryTest {
         assertEquals(listOf(taskAfter), repository.tasks.value)
         assertEquals(taskAfter, datasetStorage.load().getTask(taskAfter.id))
     }
+
+    @Test
+    fun testReplaceWithBackupSingleTask() = runTest {
+        val srcRepository = TaskRepository(MockDatasetStorage(), this)
+        val datasetStorage = MockDatasetStorage()
+        val repository = TaskRepository(datasetStorage, this)
+        val task = srcRepository.newTask("test")
+        repository.replaceWithBackup(srcRepository.getBackup())
+        assertEquals(listOf(task), repository.tasks.value)
+        assertEquals(task, datasetStorage.load().getTask(task.id))
+    }
+
+    @Test
+    fun testMergeFromBackupSingleTask() = runTest {
+        val srcRepository = TaskRepository(MockDatasetStorage(), this)
+        val datasetStorage = MockDatasetStorage()
+        val repository = TaskRepository(datasetStorage, this)
+        val task = srcRepository.newTask("test")
+        repository.mergeFromBackup(srcRepository.getBackup())
+        assertEquals(listOf(task), repository.tasks.value)
+        assertEquals(task, datasetStorage.load().getTask(task.id))
+    }
 }

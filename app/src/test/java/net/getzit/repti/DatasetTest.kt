@@ -243,6 +243,7 @@ class DatasetTest {
         runBlocking {
             checkAll(datasetArb(Arb.string())) { dataset ->
                 assertDatasetsEqual(dataset, Json.decodeFromString(Json.encodeToString(dataset)))
+                assertDatasetsEqual(dataset, Dataset.fromString(dataset.toString()))
             }
         }
     }
@@ -252,7 +253,7 @@ class DatasetTest {
         runBlocking {
             checkAll(datasetArb(Arb.string())) { dataset ->
                 val task = dataset.newTask("test")
-                dataset.checkValid()
+                dataset.requireValid()
                 assertTrue(task.name == "test")
                 assertNull(task.done)
                 assertTrue(dataset.allTasks.contains(task))
@@ -267,7 +268,7 @@ class DatasetTest {
                 val task = dataset.newTask("test")
                 val datasetCopy = dataset.copy()
                 dataset.delete(task)
-                dataset.checkValid()
+                dataset.requireValid()
                 assertFalse(dataset.allTasks.contains(task))
                 assertTrue(datasetCopy.allTasks.contains(task))
             }
@@ -279,7 +280,7 @@ class DatasetTest {
         runBlocking {
             checkAll(datasetArb(Arb.string())) { dataset ->
                 val copy = dataset.copy()
-                copy.checkValid()
+                copy.requireValid()
                 assertDatasetsEqual(dataset, copy)
             }
         }
@@ -292,7 +293,7 @@ class DatasetTest {
                 val task = dataset.newTask("before $newName")
                 val datasetCopy = dataset.copy()
                 dataset.update(task.copy(name = newName))
-                dataset.checkValid()
+                dataset.requireValid()
                 assertDatasetsNotEqual(dataset, datasetCopy)
                 assertEquals(newName, datasetSerCopy(dataset).getTask(task.id)?.name)
             }
@@ -308,7 +309,7 @@ class DatasetTest {
         val oldTimestamp = dataset.updates[task.id]!!["name"]!!
         clock.tick(4857)
         dataset.update(task.copy(name = "different"))
-        dataset.checkValid()
+        dataset.requireValid()
         val newTimestamp = dataset.updates[task.id]!!["name"]!!
         assertNotEquals(oldTimestamp, newTimestamp)
     }
@@ -324,10 +325,10 @@ class DatasetTest {
                 assume(day1 != day2)
                 val task = dataset.newTask("any name")
                 dataset.update(task.copy(done = day1))
-                dataset.checkValid()
+                dataset.requireValid()
                 val datasetCopy = dataset.copy()
                 dataset.update(task.copy(done = day2))
-                dataset.checkValid()
+                dataset.requireValid()
                 assertDatasetsNotEqual(dataset, datasetCopy)
                 assertEquals(day2, datasetSerCopy(dataset).getTask(task.id)!!.done)
             }
@@ -336,8 +337,8 @@ class DatasetTest {
 
     private fun assertUpdateFromCommutative(dataset1: Dataset, dataset2: Dataset) {
         assertDatasetsEqual(
-            dataset1.copy().also { it.updateFrom(dataset2); it.checkValid() },
-            dataset2.copy().also { it.updateFrom(dataset1); it.checkValid() })
+            dataset1.copy().also { it.updateFrom(dataset2); it.requireValid() },
+            dataset2.copy().also { it.updateFrom(dataset1); it.requireValid() })
     }
 
     @Test
@@ -375,7 +376,7 @@ class DatasetTest {
                     for (mod in mods[i]) {
                         clocks[i].tick(mod.timeInc)
                         mod.run(datasets[i])
-                        datasets[i].checkValid()
+                        datasets[i].requireValid()
                     }
                 }
                 assertUpdateFromCommutative(dataset1, dataset2)
@@ -418,7 +419,7 @@ class DatasetTest {
                 d1.clock = Clock.fixed(datasetTimeOrDefault(d1) + mod.timeInc, ZoneOffset.UTC)
                 mod.run(d1)
                 d2.updateFrom(d1)
-                d2.checkValid()
+                d2.requireValid()
                 assertDatasetsEqual(d1, d2)
             }
         }
@@ -435,9 +436,9 @@ class DatasetTest {
                     now += mod.timeInc
                     d1.clock = Clock.fixed(now, ZoneOffset.UTC)
                     mod.run(d1)
-                    d1.checkValid()
+                    d1.requireValid()
                     d2.updateFrom(d1)
-                    d2.checkValid()
+                    d2.requireValid()
                     assertDatasetsEqual(d1, d2)
                 }
             }
@@ -448,7 +449,7 @@ class DatasetTest {
     fun testClear(): Unit = runBlocking {
         checkAll(datasetArb(Arb.string())) {
             it.clear()
-            it.checkValid()
+            it.requireValid()
             assertTrue(it.allTasks.isEmpty())
         }
     }

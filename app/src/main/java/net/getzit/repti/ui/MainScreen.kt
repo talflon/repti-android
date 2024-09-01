@@ -28,6 +28,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -67,6 +68,7 @@ fun MainScreen(tasks: List<Task>) {
     val scope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     var openNewTaskDialog by rememberSaveable { mutableStateOf(false) }
+    val loadBackupDialogState = rememberLoadBackupDialogState()
     var selectedTaskId: TaskId? by rememberSaveable { mutableStateOf(null) }
 
     if (selectedTaskId != null && tasks.none { it.id == selectedTaskId }) {
@@ -76,9 +78,10 @@ fun MainScreen(tasks: List<Task>) {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            MainMenu(startNewTask = {
-                openNewTaskDialog = true
-            })
+            MainMenu(
+                startNewTask = { openNewTaskDialog = true },
+                loadBackupDialogState = loadBackupDialogState
+            )
         },
     ) {
         Scaffold(
@@ -127,10 +130,11 @@ fun MainScreen(tasks: List<Task>) {
             },
         )
     }
+    LoadBackupDialog(loadBackupDialogState)
 }
 
 @Composable
-fun MainMenu(startNewTask: () -> Unit) {
+fun MainMenu(startNewTask: () -> Unit, loadBackupDialogState: MutableState<String?>) {
     val contentDescription = stringResource(R.string.lbl_menu)
     ModalDrawerSheet(
         modifier = Modifier.semantics { this.contentDescription = contentDescription }
@@ -150,13 +154,18 @@ fun MainMenu(startNewTask: () -> Unit) {
             selected = false,
             onClick = rememberSaveBackup(),
         )
+        NavigationDrawerItem(
+            label = { Text(stringResource(R.string.cmd_load_backup)) },
+            selected = false,
+            onClick = rememberLoadBackup(loadBackupDialogState),
+        )
     }
 }
 
 @Preview
 @Composable
 fun PreviewMainMenu() {
-    MainMenu(startNewTask = {})
+    MainMenu(startNewTask = {}, loadBackupDialogState = rememberLoadBackupDialogState())
 }
 
 @Composable

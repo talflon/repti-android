@@ -29,5 +29,15 @@
     <string name="cmd_save_backup">Save backup</string>
     <string name="default_backup_filename">repti.bak</string>
     <string name="msg_backup_saved">Backup saved</string>
-    <string name="msg_backup_error">Error saving backup</string>
+    <string name="msg_backup_loaded">Backup loaded</string>
+    <string name="msg_backup_save_error">Error saving backup</string>
+    <string name="cmd_load_backup">Load backup</string>
+    <string name="msg_backup_load_error">Error loading backup</string>
+    <string name="msg_backup_load_method_q">How do you want to load the backup?</string>
+    <string name="cmd_synchronize">Synchronize</string>
+    <string name="cmd_replace">Replace</string>
+    <string name="msg_backup_explain_replace">This will discard your current data and replace it with the contents of the backup.</string>
+    <string name="msg_backup_explain_synchronize">This will synchronize your current data with the backup, taking the most recent updates of each. The backup file will not be changed.</string>
+    <string name="msg_warn_no_undo_plural">These cannot be undone.</string>
+    <string name="msg_warning">Warning</string>
 </resources>

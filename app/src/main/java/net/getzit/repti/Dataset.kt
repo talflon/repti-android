@@ -183,24 +183,27 @@ class Dataset {
         this.deleted.clear()
     }
 
-    override fun toString(): String {
-        return Json.encodeToString(this)
-    }
+    override fun toString(): String = Json.encodeToString(this)
 
-    internal fun checkValid() {
-        check(tasks.size == updates.size)
+    internal fun requireValid() {
+        require(tasks.size == updates.size)
         for (id in deleted.keys) {
-            check(id.valid)
-            check(id !in tasks)
-            check(id !in updates)
+            require(id.valid)
+            require(id !in tasks)
+            require(id !in updates)
         }
         for ((id, task) in tasks) {
-            check(id.valid)
-            check(id == task.id)
+            require(id.valid)
+            require(id == task.id)
             val updates = this.updates[id]
-            check(updates != null)
-            check("name" in updates)
+            require(updates != null)
+            require("name" in updates)
         }
+    }
+
+    companion object {
+        fun fromString(s: String): Dataset =
+            Json.decodeFromString<Dataset>(s).also { it.requireValid() }
     }
 }
 
