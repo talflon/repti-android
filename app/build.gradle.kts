@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.parcelize)
@@ -38,10 +39,8 @@ android {
     buildFeatures {
         compose = true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.8"
-    }
 
+    @Suppress("UnstableApiUsage")
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
@@ -64,6 +63,7 @@ dependencies {
     for (lib in sequenceOf(
         composeBom,
         libs.androidx.espresso.core,
+        libs.androidx.junit,
         libs.compose.ui.test.junit4,
         project(":shared-test"),
     )) {

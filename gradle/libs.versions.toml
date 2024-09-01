@@ -1,30 +1,32 @@
 [versions]
-androidGradlePlugin = "8.5.2"
-kotlin = "1.9.22"
+androidGradlePlugin = "8.6.0"
+kotlin = "2.0.20"
 dokka = "1.9.10"
-composeBom = "2024.06.00"
+composeBom = "2024.08.00"
+compose_ui = "1.6.8"
+compose_material3 = "1.2.1"
 activityCompose = "1.9.1"
 appcompat = "1.7.0"
-desugar_jdk_libs = "2.0.4"
+desugar_jdk_libs = "2.1.1"
 espresso = "3.6.1"
 jsonassert = "1.5.1"
 junit = "4.13.2"
 androidxJunit = "1.2.1"
-kotestProperty = "5.8.0"
-kotlinxCoroutinesTest = "1.7.3"
-kotlinxSerializationJson = "1.6.2"
+kotestProperty = "5.9.1"
+kotlinxCoroutinesTest = "1.8.1"
+kotlinxSerializationJson = "1.7.2"
 ktx = "1.13.1"
 material = "1.12.0"
-robolectric = "4.11.1"
+robolectric = "4.13"
 
 [libraries]
 dokka-android = { module = "org.jetbrains.dokka:android-documentation-plugin", version.ref = "dokka" }
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
-compose-material3 = { module = "androidx.compose.material3:material3" }
-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
-compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
+compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "compose_material3" }
+compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview", version.ref = "compose_ui" }
+compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "compose_ui" }
+compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "compose_ui" }
+compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "compose_ui" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espresso" }
@@ -46,6 +48,7 @@ robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectr
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
 android-library = { id = "com.android.library", version.ref = "androidGradlePlugin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
