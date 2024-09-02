@@ -169,12 +169,18 @@ fun TaskDoneQuickSetter(@PreviewParameter(TaskPreviewParameterProvider::class) t
             )
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            val today = Day.today()
             Button(onClick = {
                 scope.launchTaskRepository {
                     update(task.copy(done = Day.today()))
                 }
-            }, enabled = task.done != Day.today()) {
-                Text(stringResource(R.string.cmd_done_today))
+            }, enabled = task.done != today) {
+                Text(
+                    stringResource(
+                        if (task.done == null || task.done == today) R.string.cmd_done
+                        else R.string.cmd_done_today
+                    )
+                )
             }
             Text(
                 textAlign = TextAlign.Center,

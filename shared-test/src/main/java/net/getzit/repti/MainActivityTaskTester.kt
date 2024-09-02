@@ -163,7 +163,10 @@ abstract class MainActivityTaskTester : MainActivityTester() {
         inActivity {
             selectTaskByName(taskName)
             with(composeRule) {
-                onNode(hasAnyAncestor(isDetailsCard()) and isButton(R.string.cmd_done_today)).performClick()
+                onNode(
+                    hasAnyAncestor(isDetailsCard())
+                            and (isButton(R.string.cmd_done_today) or isButton(R.string.cmd_done))
+                ).performClick()
                 waitForIdle()
             }
             assertEquals(
