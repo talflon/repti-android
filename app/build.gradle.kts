@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.dokka)
+    alias(libs.plugins.about.libraries)
 }
 
 android {
@@ -54,6 +55,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.appcompat)
     implementation(libs.android.material)
+    implementation(libs.about.libraries.compose.m3)
     testImplementation(libs.junit)
     testImplementation(libs.kotest.property)
     testImplementation(libs.jsonassert)

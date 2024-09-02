@@ -1,5 +1,6 @@
 package net.getzit.repti.ui
 
+import android.content.Intent
 import android.content.res.Configuration.UI_MODE_NIGHT_YES
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
@@ -40,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -48,6 +50,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.launch
+import net.getzit.repti.LicensesActivity
 import net.getzit.repti.R
 import net.getzit.repti.Task
 import net.getzit.repti.TaskId
@@ -139,6 +142,7 @@ fun MainScreen(tasks: List<Task>) {
 
 @Composable
 fun MainMenu(startNewTask: () -> Unit, loadBackupDialogState: MutableState<String?>) {
+    val ctx = LocalContext.current
     val contentDescription = stringResource(R.string.lbl_menu)
     ModalDrawerSheet(
         modifier = Modifier.semantics { this.contentDescription = contentDescription }
@@ -151,6 +155,10 @@ fun MainMenu(startNewTask: () -> Unit, loadBackupDialogState: MutableState<Strin
         MenuItem(startNewTask, R.string.cmd_create_new_task, icon = Icons.Rounded.Add)
         MenuItem(rememberSaveBackup(), R.string.cmd_save_backup)
         MenuItem(rememberLoadBackup(loadBackupDialogState), R.string.cmd_load_backup)
+        MenuItem(
+            { ctx.startActivity(Intent(ctx, LicensesActivity::class.java)) },
+            R.string.cmd_show_licenses
+        )
     }
 }
 

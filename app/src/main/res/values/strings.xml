@@ -40,4 +40,5 @@
     <string name="msg_backup_explain_synchronize">This will synchronize your current data with the backup, taking the most recent updates of each. The backup file will not be changed.</string>
     <string name="msg_warn_no_undo_plural">These cannot be undone.</string>
     <string name="msg_warning">Warning</string>
+    <string name="cmd_show_licenses">Show licenses</string>
 </resources>
