@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Daniel Getz <dan@getzit.net>
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)

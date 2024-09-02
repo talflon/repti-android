@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2024 Daniel Getz <dan@getzit.net>
+
+SPDX-License-Identifier: GPL-3.0-or-later
+-->
+
 # repti
 
 Simple Android app to keep track of things to do regularly.
