@@ -21,6 +21,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneOffset
 import kotlin.random.Random
 
@@ -63,6 +64,41 @@ class DatasetTypesTest {
         runBlocking {
             checkAll(localDateArb) { date ->
                 assertEquals(date, Day.of(date).date)
+            }
+        }
+    }
+
+    @Test
+    fun testToFromMillis() {
+        runBlocking {
+            checkAll<Day> { day ->
+                assertEquals(day, Day.fromMillis(day.millis))
+            }
+        }
+    }
+
+    @Test
+    fun testMillis() {
+        runBlocking {
+            checkAll(localDateArb) { date ->
+                assertEquals(
+                    date.atTime(LocalTime.MIN).toInstant(ZoneOffset.UTC).toEpochMilli(),
+                    Day.of(date).millis
+                )
+            }
+        }
+    }
+
+    @Test
+    fun testFromMillis() {
+        runBlocking {
+            checkAll(localDateArb) { date ->
+                assertEquals(
+                    date,
+                    Day.fromMillis(
+                        date.atTime(LocalTime.MIN).toInstant(ZoneOffset.UTC).toEpochMilli()
+                    ).date
+                )
             }
         }
     }

@@ -12,12 +12,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme.typography
@@ -25,11 +29,13 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -41,11 +47,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.datasource.CollectionPreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import net.getzit.repti.Day
 import net.getzit.repti.R
 import net.getzit.repti.Task
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +67,7 @@ fun TaskDetailSheet(
     val sheetContentDescription = stringResource(R.string.lbl_more_information_for_task)
     var openDeleteDialog by rememberSaveable { mutableStateOf(false) }
     var openEditDialog by rememberSaveable { mutableStateOf(false) }
+    var openDateDialog by rememberSaveable { mutableStateOf(false) }
 
     ModalBottomSheet(
         modifier = Modifier.semantics { contentDescription = sheetContentDescription },
@@ -98,6 +108,20 @@ fun TaskDetailSheet(
             }
             HorizontalDivider()
             TaskDoneQuickSetter(task)
+            if (task.done != null) {
+                val date = task.done.date
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    FilledTonalButton({ openDateDialog = true }) {
+                        Text(text = rememberDoneDateFormatter().format(date))
+                        Icon(Icons.Rounded.DateRange, contentDescription = "Select date")
+                    }
+                }
+            }
         }
     }
 
@@ -137,7 +161,22 @@ fun TaskDetailSheet(
                     update(task.copy(name = it))
                 }
             })
+    } else if (openDateDialog && task.done != null) {
+        EditDayDialog(
+            oldDay = task.done,
+            onDismissRequest = { openDateDialog = false },
+            onConfirmRequest = { day ->
+                openDateDialog = false
+                scope.launchTaskRepository {
+                    update(task.copy(done = day))
+                }
+            })
     }
+}
+
+@Composable
+fun rememberDoneDateFormatter(): DateTimeFormatter = remember {
+    DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -259,4 +298,49 @@ fun EditTaskNameDialog(
 @Composable
 fun PreviewEditTaskNameDialog(@PreviewParameter(TaskPreviewParameterProvider::class) task: Task) {
     EditTaskNameDialog(oldName = task.name, onDismissRequest = {}, onConfirmRequest = {})
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditDayDialog(
+    oldDay: Day,
+    onDismissRequest: () -> Unit,
+    onConfirmRequest: (Day) -> Unit
+) {
+    val datePickerState = rememberDatePickerState(oldDay.millis)
+
+    DatePickerDialog(
+        onDismissRequest = onDismissRequest,
+        confirmButton = {
+            Button(onClick = {
+                val millis = datePickerState.selectedDateMillis
+                if (millis != null) {
+                    onConfirmRequest(Day.fromMillis(millis))
+                } else {
+                    onDismissRequest()
+                }
+            }) {
+                Text(stringResource(R.string.cmd_save))
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismissRequest) {
+                Text(stringResource(R.string.cmd_cancel))
+            }
+        }
+    ) {
+        DatePicker(state = datePickerState)
+    }
+}
+
+class DatePreviewParameterProvider : CollectionPreviewParameterProvider<Day>(
+    listOf(
+        Day.today(),
+    )
+)
+
+@Preview
+@Composable
+fun PreviewEditDayDialog(@PreviewParameter(DatePreviewParameterProvider::class) day: Day) {
+    EditDayDialog(oldDay = day, onDismissRequest = {}, onConfirmRequest = {})
 }

@@ -298,15 +298,21 @@ value class Day internal constructor(private val epochDays: Int) : Comparable<Da
 
     fun daysAfter(day: Day): Int = this.epochDays - day.epochDays
 
+    val millis: Long get() = (epochDays + EPOCH) * MILLIS_IN_DAY
+
     companion object {
         /**
          * 2021-01-01, in days since the regular epoch (1970-01-01)
          */
         const val EPOCH: Long = 18628
 
+        private const val MILLIS_IN_DAY: Long = 86_400_000
+
         fun today(clock: Clock = Clock.systemDefaultZone()) = of(LocalDate.now(clock))
 
         fun of(date: LocalDate) = Day(toIntExact(date.toEpochDay() - EPOCH))
+
+        fun fromMillis(millis: Long) = Day(toIntExact((millis / MILLIS_IN_DAY - EPOCH)))
     }
 }
 
