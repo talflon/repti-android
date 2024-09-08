@@ -66,6 +66,7 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.android.material)
     implementation(libs.about.libraries.compose.m3)
+    implementation(libs.androidx.lifecycle.process)
     testImplementation(libs.junit)
     testImplementation(libs.kotest.property)
     testImplementation(libs.jsonassert)

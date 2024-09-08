@@ -10,9 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.view.WindowCompat
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 import net.getzit.repti.ui.MainUI
 
@@ -25,9 +23,7 @@ class MainActivity : ComponentActivity() {
             MainUI(tasks)
         }
         lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                TaskRepository.instance.ensureLoaded()
-            }
+            TaskRepository.instance.ensureLoaded()
         }
     }
 }

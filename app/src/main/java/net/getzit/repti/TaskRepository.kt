@@ -5,6 +5,7 @@
 package net.getzit.repti
 
 import android.content.Context
+import android.util.Log
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +20,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.FileNotFoundException
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 class TaskRepository(
     private val localSource: Storage<Dataset>,
@@ -57,6 +60,10 @@ class TaskRepository(
 
     suspend fun ensureLoaded() {
         withDataset { }
+    }
+
+    suspend fun ensureSaved() {
+        localSource.flush()
     }
 
     /**
@@ -114,17 +121,20 @@ class TaskRepository(
             context: Context,
             scope: CoroutineScope = CoroutineScope(SupervisorJob()),
             ioDispatcher: CoroutineDispatcher = Dispatchers.IO
-        ) =
-            TaskRepository(
-                localSource = DatasetJsonStorage(
+        ) = TaskRepository(
+            localSource = DelayedSaveStorage(
+                underlying = DatasetJsonStorage(
                     LocalFileStorage.forPath(
                         path = context.getString(R.string.path_dataset_file),
                         context = context,
                         ioDispatcher = ioDispatcher,
                     )
                 ),
-                externalScope = scope,
-            )
+                delay = 15.seconds,
+                scope = scope,
+            ),
+            externalScope = scope,
+        )
 
         fun create(
             storage: Storage<String>,
@@ -139,6 +149,7 @@ class TaskRepository(
 interface Storage<T> {
     suspend fun load(): T
     suspend fun save(value: T)
+    suspend fun flush() {}
 }
 
 class DatasetJsonStorage(private val stringStorage: Storage<String>) : Storage<Dataset> {
@@ -154,6 +165,8 @@ class DatasetJsonStorage(private val stringStorage: Storage<String>) : Storage<D
     override suspend fun save(value: Dataset) {
         stringStorage.save(Json.encodeToString(value))
     }
+
+    override suspend fun flush() = stringStorage.flush()
 }
 
 class LocalFileStorage(
@@ -192,5 +205,27 @@ class VarStorage<T>(var value: T) : Storage<T> {
 
     override suspend fun save(value: T) {
         this.value = value
+    }
+}
+
+class DelayedSaveStorage<T>(
+    private val underlying: Storage<T>,
+    delay: Duration,
+    scope: CoroutineScope,
+) : Storage<T> {
+    private val timeTrigger =
+        IdleTimeoutTrigger<T>(timeoutMillis = delay.inWholeMilliseconds, scope = scope) {
+            underlying.save(it)
+            Log.d("DelayedSaveStorage", "Value saved")
+        }
+
+    override suspend fun load() = underlying.load()
+
+    override suspend fun save(value: T) {
+        timeTrigger.trigger(value)
+    }
+
+    override suspend fun flush() {
+        timeTrigger.runNowIfTriggered()
     }
 }
