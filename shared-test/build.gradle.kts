@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "net.getzit.repti.test"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 21

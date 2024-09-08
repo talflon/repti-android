@@ -14,7 +14,7 @@ plugins {
 
 android {
     namespace = "net.getzit.repti"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "net.getzit.repti"
