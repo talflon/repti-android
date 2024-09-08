@@ -47,5 +47,10 @@ SPDX-License-Identifier: GPL-3.0-or-later
     <string name="msg_backup_explain_synchronize">This will synchronize your current data with the backup, taking the most recent updates of each. The backup file will not be changed.</string>
     <string name="msg_warn_no_undo_plural">These cannot be undone.</string>
     <string name="msg_warning">Warning</string>
-    <string name="cmd_show_licenses">Show licenses</string>
+    <string name="cmd_show_about">About Repti</string>
+    <string name="title_about">About Repti</string>
+    <string name="cmd_back">Back</string>
+    <string name="lbl_version">Version</string>
+    <string name="msg_copyright_notice">Copyright © 2024 Daniel Getz</string>
+    <string name="msg_about_licenses">Licensed under the GPL v3, and includes the following libraries with licenses as noted:</string>
 </resources>

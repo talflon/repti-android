@@ -54,7 +54,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.launch
-import net.getzit.repti.LicensesActivity
+import net.getzit.repti.AboutActivity
 import net.getzit.repti.R
 import net.getzit.repti.Task
 import net.getzit.repti.TaskId
@@ -160,8 +160,8 @@ fun MainMenu(startNewTask: () -> Unit, loadBackupDialogState: MutableState<Strin
         MenuItem(rememberSaveBackup(), R.string.cmd_save_backup)
         MenuItem(rememberLoadBackup(loadBackupDialogState), R.string.cmd_load_backup)
         MenuItem(
-            { ctx.startActivity(Intent(ctx, LicensesActivity::class.java)) },
-            R.string.cmd_show_licenses
+            { ctx.startActivity(Intent(ctx, AboutActivity::class.java)) },
+            R.string.cmd_show_about
         )
     }
 }
