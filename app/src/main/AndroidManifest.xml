@@ -29,7 +29,6 @@ SPDX-License-Identifier: GPL-3.0-or-later
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".AboutActivity" />
     </application>
 
 </manifest>

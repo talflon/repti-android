@@ -4,7 +4,6 @@
 
 package net.getzit.repti.ui
 
-import android.content.Intent
 import android.content.res.Configuration.UI_MODE_NIGHT_YES
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
@@ -45,7 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -54,7 +52,6 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.launch
-import net.getzit.repti.AboutActivity
 import net.getzit.repti.R
 import net.getzit.repti.Task
 import net.getzit.repti.TaskId
@@ -65,8 +62,11 @@ import net.getzit.repti.ui.theme.ReptiTheme
 @Composable
 fun MainUI(@PreviewParameter(TaskListPreviewParameterProvider::class) tasks: List<Task>?) {
     ReptiTheme(dynamicColor = false) {
-        if (tasks != null) {
-            MainScreen(tasks)
+        var showAbout by rememberSaveable { mutableStateOf(false) }
+        if (showAbout) {
+            AboutScreen(goBack = { showAbout = false })
+        } else if (tasks != null) {
+            MainScreen(tasks, showAbout = { showAbout = true })
         } else {
             LoadingScreen()
         }
@@ -75,7 +75,7 @@ fun MainUI(@PreviewParameter(TaskListPreviewParameterProvider::class) tasks: Lis
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(tasks: List<Task>) {
+fun MainScreen(tasks: List<Task>, showAbout: () -> Unit) {
     val scope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     var openNewTaskDialog by rememberSaveable { mutableStateOf(false) }
@@ -91,7 +91,8 @@ fun MainScreen(tasks: List<Task>) {
         drawerContent = {
             MainMenu(
                 startNewTask = { openNewTaskDialog = true },
-                loadBackupDialogState = loadBackupDialogState
+                loadBackupDialogState = loadBackupDialogState,
+                showAbout = showAbout,
             )
         },
     ) {
@@ -145,8 +146,11 @@ fun MainScreen(tasks: List<Task>) {
 }
 
 @Composable
-fun MainMenu(startNewTask: () -> Unit, loadBackupDialogState: MutableState<String?>) {
-    val ctx = LocalContext.current
+fun MainMenu(
+    startNewTask: () -> Unit,
+    loadBackupDialogState: MutableState<String?>,
+    showAbout: () -> Unit
+) {
     val contentDescription = stringResource(R.string.lbl_menu)
     ModalDrawerSheet(
         modifier = Modifier.semantics { this.contentDescription = contentDescription }
@@ -159,10 +163,7 @@ fun MainMenu(startNewTask: () -> Unit, loadBackupDialogState: MutableState<Strin
         MenuItem(startNewTask, R.string.cmd_create_new_task, icon = Icons.Rounded.Add)
         MenuItem(rememberSaveBackup(), R.string.cmd_save_backup)
         MenuItem(rememberLoadBackup(loadBackupDialogState), R.string.cmd_load_backup)
-        MenuItem(
-            { ctx.startActivity(Intent(ctx, AboutActivity::class.java)) },
-            R.string.cmd_show_about
-        )
+        MenuItem(showAbout, R.string.cmd_show_about)
     }
 }
 
@@ -184,7 +185,10 @@ fun MenuItem(onClick: () -> Unit, @StringRes labelText: Int, icon: ImageVector? 
 @Preview
 @Composable
 fun PreviewMainMenu() {
-    MainMenu(startNewTask = {}, loadBackupDialogState = rememberLoadBackupDialogState())
+    MainMenu(
+        startNewTask = {},
+        loadBackupDialogState = rememberLoadBackupDialogState(),
+        showAbout = {})
 }
 
 @Composable
