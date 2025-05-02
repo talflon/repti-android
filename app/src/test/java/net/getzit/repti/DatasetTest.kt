@@ -21,13 +21,13 @@ import io.kotest.property.arbitrary.string
 import io.kotest.property.arbitrary.uShort
 import io.kotest.property.assume
 import io.kotest.property.checkAll
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.encodeToJsonElement
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -67,20 +67,29 @@ class DatasetTest {
         }
     }
 
+    /**
+     * Eliminate a task from a Dataset, without registering a deletion.
+     */
     private fun erase(dataset: Dataset, id: TaskId) {
         dataset.tasks -= id
         dataset.updates -= id
         dataset.deleted -= id
+        dataset.order -= id
     }
 
+    /**
+     * Shrinks by removing and shortening lots of tasks in one go
+     */
     private fun addFastShrinks(dataset: Dataset, shrinks: MutableList<Dataset>) {
         for (speedPct in 80 downTo 20 step 10) {
             val newDataset = dataset.copy()
             for ((id, task) in dataset.tasks) {
                 if (Random.nextInt(100) < speedPct) {
                     if (Random.nextBoolean()) {
+                        // eliminate without registering a deletion, so that the Dataset is truly smaller
                         erase(newDataset, id)
                     } else if (task.name.length > 1) {
+                        // reduce length of name
                         newDataset.tasks[id] =
                             task.copy(name = task.name.substring(0..task.name.length / 2))
                     }
@@ -97,6 +106,9 @@ class DatasetTest {
         }
     }
 
+    /**
+     * Shrinks by individual changes to Dataset
+     */
     private fun addSlowShrinks(dataset: Dataset, shrinks: MutableList<Dataset>) {
         for ((id, task) in dataset.tasks) {
             shrinks.add(dataset.copy().also { erase(it, id) })
@@ -284,8 +296,20 @@ class DatasetTest {
         runBlocking {
             checkAll(datasetArb(Arb.string())) { dataset ->
                 val copy = dataset.copy()
+                assertNotSame(dataset, copy)
                 copy.requireValid()
                 assertDatasetsEqual(dataset, copy)
+            }
+        }
+    }
+
+    @Test
+    fun testCopyUpdatesNotLinked(): Unit = runBlocking {
+        checkAll(datasetArb(Arb.string())) { dataset ->
+            val copy = dataset.copy()
+            assertNotSame(dataset.updates, copy.updates)
+            for (id in dataset.tasks.keys) {
+                assertNotSame(dataset.updates[id], copy.updates[id])
             }
         }
     }
@@ -362,6 +386,21 @@ class DatasetTest {
     private fun datasetTimeOrDefault(dataset: Dataset): Instant =
         maxDatasetTime(dataset) ?: LocalDateTime.of(2024, 1, 1, 0, 0).toInstant(ZoneOffset.UTC)
 
+    private fun forkDataset(origDataset: Dataset, mods: List<List<DatasetMod>>): List<Dataset> {
+        val datasets = List(mods.size) { origDataset.copy() }
+        val startTime = datasetTimeOrDefault(origDataset)
+        val clocks = List(mods.size) { MockClock(startTime) }
+        for (i in mods.indices) {
+            datasets[i].clock = clocks[i]
+            for (mod in mods[i]) {
+                clocks[i].tick(mod.timeInc)
+                mod.run(datasets[i])
+                datasets[i].requireValid()
+            }
+        }
+        return datasets
+    }
+
     @Test
     fun testUpdateFromRelatedCommutative() {
         runBlocking {
@@ -370,20 +409,8 @@ class DatasetTest {
                 Arb.list(datasetModArb(smallNameArb)),
                 Arb.list(datasetModArb(smallNameArb))
             ) { dataset1, mods1, mods2 ->
-                val startTime = datasetTimeOrDefault(dataset1)
-                val dataset2 = dataset1.copy()
-                val datasets = listOf(dataset1, dataset2)
-                val mods = listOf(mods1, mods2)
-                val clocks = listOf(MockClock(startTime), MockClock(startTime))
-                for (i in 0..1) {
-                    datasets[i].clock = clocks[i]
-                    for (mod in mods[i]) {
-                        clocks[i].tick(mod.timeInc)
-                        mod.run(datasets[i])
-                        datasets[i].requireValid()
-                    }
-                }
-                assertUpdateFromCommutative(dataset1, dataset2)
+                val datasets = forkDataset(dataset1, listOf(mods1, mods2))
+                assertUpdateFromCommutative(datasets[0], datasets[1])
             }
         }
     }
@@ -413,10 +440,26 @@ class DatasetTest {
         assertUpdateFromCommutative(d1, d2)
         clock.tick()
         d2.delete(task2.id)
+        assertUpdateFromCommutative(d1, d2)
     }
 
     @Test
-    fun testUpdateFrom() {
+    fun testUpdateFromCommutativeSimpleBoth() {
+        val clock = MockClock.default()
+        val d1 = Dataset()
+        d1.clock = clock
+        clock.tick()
+        d1.newTask("one")
+        val d2 = d1.copy().also { it.clock = clock }
+        clock.tick()
+        d2.newTask("two")
+        clock.tick()
+        d1.newTask("three")
+        assertUpdateFromCommutative(d1, d2)
+    }
+
+    @Test
+    fun testUpdateFromDescendantIdentical() {
         runBlocking {
             checkAll(datasetArb(smallNameArb), datasetModArb(smallNameArb)) { d1, mod ->
                 val d2 = d1.copy()
@@ -425,6 +468,42 @@ class DatasetTest {
                 d2.updateFrom(d1)
                 d2.requireValid()
                 assertDatasetsEqual(d1, d2)
+            }
+        }
+    }
+
+    private fun assertUpdateFromIdempotent(toBeUpdated: Dataset, toUpdateFrom: Dataset) {
+        assertDatasetsEqual(
+            toBeUpdated.copy().also {
+                it.updateFrom(toUpdateFrom)
+                it.requireValid()
+            },
+            toBeUpdated.copy().also {
+                it.updateFrom(toUpdateFrom)
+                it.updateFrom(toUpdateFrom)
+                it.requireValid()
+            })
+    }
+
+    @Test
+    fun testUpdateFromUnrelatedIdempotent() {
+        runBlocking {
+            checkAll(datasetArb(smallNameArb), datasetArb(smallNameArb)) { d1, d2 ->
+                assertUpdateFromIdempotent(d1, d2)
+            }
+        }
+    }
+
+    @Test
+    fun testUpdateFromRelatedIdempotent() {
+        runBlocking {
+            checkAll(
+                datasetArb(smallNameArb),
+                Arb.list(datasetModArb(smallNameArb)),
+                Arb.list(datasetModArb(smallNameArb))
+            ) { dataset1, mods1, mods2 ->
+                val datasets = forkDataset(dataset1, listOf(mods1, mods2))
+                assertUpdateFromIdempotent(datasets[0], datasets[1])
             }
         }
     }
@@ -450,6 +529,17 @@ class DatasetTest {
     }
 
     @Test
+    fun testUpdateFromLeavesOtherUntouched() {
+        runBlocking {
+            checkAll(datasetArb(smallNameArb), datasetArb(smallNameArb)) { d1, d2 ->
+                val copy = d2.copy()
+                d1.updateFrom(d2)
+                assertDatasetsEqual(d2, copy)
+            }
+        }
+    }
+
+    @Test
     fun testClear(): Unit = runBlocking {
         checkAll(datasetArb(Arb.string())) {
             it.clear()
@@ -460,9 +550,9 @@ class DatasetTest {
 }
 
 fun assertDatasetsEqual(d1: Dataset, d2: Dataset) {
-    JSONAssert.assertEquals(Json.encodeToString(d1), Json.encodeToString(d2), false)
+    JSONAssert.assertEquals(Json.encodeToString(d1), Json.encodeToString(d2), true)
 }
 
 fun assertDatasetsNotEqual(d1: Dataset, d2: Dataset) {
-    JSONAssert.assertNotEquals(Json.encodeToString(d1), Json.encodeToString(d2), false)
+    JSONAssert.assertNotEquals(Json.encodeToString(d1), Json.encodeToString(d2), true)
 }

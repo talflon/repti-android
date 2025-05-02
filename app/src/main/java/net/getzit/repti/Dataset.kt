@@ -12,7 +12,6 @@ import kotlinx.serialization.Transient
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
@@ -34,6 +33,10 @@ import kotlin.random.Random
  *          "done": (date),
  *        }
  *      },
+ *      "order": [
+ *        "(task id)",
+ *        "(task id)"
+ *      ],
  *      "updates": {
  *        "(task id)": {
  *          "name": (timestamp),
@@ -53,6 +56,7 @@ import kotlin.random.Random
 @Serializable
 class Dataset {
     internal val tasks = mutableMapOf<TaskId, Task>()
+    internal val order = mutableListOf<TaskId>()
     internal val updates = mutableMapOf<TaskId, MutableMap<String, Timestamp>>()
     internal val deleted = mutableMapOf<TaskId, Timestamp>()
 
@@ -63,10 +67,10 @@ class Dataset {
     var clock: Clock = Clock.systemDefaultZone()
 
     /**
-     * All of the tasks, as an immutable [Collection].
+     * All of the tasks, as an immutable [List].
      */
-    val allTasks: Collection<Task>
-        get() = tasks.values
+    val allTasks: List<Task>
+        get() = order.map { id -> tasks[id]!! }
 
     fun getTask(id: TaskId): Task? = tasks[id]
 
@@ -83,6 +87,7 @@ class Dataset {
         } while (id in tasks || id in deleted)
         val task = Task(id, name, null)
         tasks[id] = task
+        order += id  // add to end of order
         updates[id] = mutableMapOf("name" to now)
         return task
     }
@@ -93,9 +98,7 @@ class Dataset {
      * @param taskId the [TaskId] of the task to be deleted
      */
     fun delete(taskId: TaskId) {
-        deleted[taskId] = Timestamp.now(clock)
-        tasks -= taskId
-        updates -= taskId
+        delete(taskId, Timestamp.now(clock))
     }
 
     /**
@@ -105,6 +108,19 @@ class Dataset {
      */
     fun delete(task: Task) {
         delete(task.id)
+    }
+
+    /**
+     * Deletes a task.
+     *
+     * @param taskId the [TaskId] of the task to be deleted
+     * @param timestamp the [Timestamp] of the deletion
+     */
+    fun delete(taskId: TaskId, timestamp: Timestamp) {
+        deleted[taskId] = timestamp
+        tasks -= taskId
+        order -= taskId
+        updates -= taskId
     }
 
     fun update(task: Task) {
@@ -125,11 +141,21 @@ class Dataset {
      */
     fun copy() = Dataset().also {
         it.tasks.putAll(this.tasks)
+        it.order.addAll(this.order)
         it.updates.putAll(this.updates.mapValues { it.value.toMutableMap() })
         it.deleted.putAll(this.deleted)
     }
 
+    /**
+     * Gets the most recent update time for a given TaskId.
+     * The task must exist in this Dataset.
+     */
     fun lastUpdate(id: TaskId): Timestamp = updates[id]!!.values.max()
+
+    /**
+     * Gets the most recent update time for any task in this Dataset, or null if there are no tasks.
+     */
+    fun lastUpdate(): Timestamp? = updates.values.maxOfOrNull { it.values.max() }
 
     /**
      * Synchronize this dataset by copying from another.
@@ -140,29 +166,30 @@ class Dataset {
      * @param other the dataset to copy changes from, which will not itself be modified.
      */
     fun updateFrom(other: Dataset) {
-        // Check for deletions
+        // we only will need to check this for the order sync hack
+        val oldLastUpdate = if (this.order != other.order) this.lastUpdate() else null
+        // Check for deletions in other
         for ((id, otherDeleted) in other.deleted) {
-            val task = this.tasks[id]
-            if (task == null) {
+            val ourTask = this.tasks[id]
+            if (ourTask == null) {
                 // ensure we have the most recent deletion timestamp
                 val ourDeleted = this.deleted[id]
                 if (ourDeleted == null || ourDeleted < otherDeleted) {
                     this.deleted[id] = otherDeleted
                 }
             } else if (this.lastUpdate(id) <= otherDeleted) { // tie goes to deletion
-                this.tasks -= id
-                this.updates -= id
-                this.deleted[id] = otherDeleted
+                delete(id, otherDeleted)
             }
         }
-        // Check for new and updated tasks
+        // Check for new and updated tasks in other
         for ((id, otherTask) in other.tasks) {
             val ourDeleted = this.deleted[id]
             if (ourDeleted == null) {
                 val ourTask = this.tasks[id]
-                if (ourTask == null) {
+                if (ourTask == null) { // new task from other
                     this.tasks[id] = otherTask.copy()
                     this.updates[id] = other.updates[id]!!.toMutableMap()
+                    this.order += id  // add to end of tasks
                 } else { // task exists in both; update individual fields
                     val updatedTask = ourTask.updateFrom(
                         otherTask,
@@ -174,15 +201,42 @@ class Dataset {
                     }
                 }
             } else if (other.lastUpdate(id) > ourDeleted) { // tie goes to deletion
+                // task was deleted here, but updated more recently in other
                 this.deleted -= id
                 this.tasks[id] = otherTask.copy()
                 this.updates[id] = other.updates[id]!!.toMutableMap()
+                this.order += id  // add to end of tasks
+            }
+            // else: the task was most recently deleted
+        }
+        /* XXX Hack for the order:
+           The above code is idempotent and commutative IF we can uniquely identify `this` vs
+           `other` and we choose `this` to have precedence. One way to do this is by timestamps.
+           If `other` should have precedence, redo the order based on `other.order`.
+           XXX Hack for timestamp: choose the newest timestamp that exists in the Dataset,
+           whatever it is for.
+         */
+        if (this.order != other.order) {
+            // compare to our original last update, because we've modified ourselves
+            // otherwise, the comparison between the unchanged other and the changed this
+            // fails on some corner cases
+            if (nullsLast<Timestamp>().compare(other.lastUpdate(), oldLastUpdate) > 0) {
+                /* Do the reverse of what we did above: instead of keeping our order for
+                   undeleted items and add new items from them to the end, keep their order
+                   for undeleted items and add our new items to the end.
+                 */
+                val fromOther = other.order.filter { this.tasks.contains(it) }
+                val ours = this.order.filterNot { fromOther.contains(it) }
+                this.order.clear()
+                this.order.addAll(fromOther)
+                this.order.addAll(ours)
             }
         }
     }
 
     fun clear() {
         this.tasks.clear()
+        this.order.clear()
         this.updates.clear()
         this.deleted.clear()
     }
@@ -191,14 +245,17 @@ class Dataset {
 
     internal fun requireValid() {
         require(tasks.size == updates.size)
+        require(tasks.size == order.size)
         for (id in deleted.keys) {
             require(id.valid)
             require(id !in tasks)
+            require(id !in order)
             require(id !in updates)
         }
         for ((id, task) in tasks) {
             require(id.valid)
             require(id == task.id)
+            require(id in order)
             val updates = this.updates[id]
             require(updates != null)
             require("name" in updates)
