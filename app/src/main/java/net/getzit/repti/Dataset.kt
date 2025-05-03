@@ -40,6 +40,7 @@ import kotlin.random.Random
  *      "updates": {
  *        "(task id)": {
  *          "name": (timestamp),
+ *          "loc": (timestamp),
  *          "done": (timestamp),
  *        }
  *      },
@@ -70,7 +71,7 @@ class Dataset {
      * All of the tasks, as an immutable [List].
      */
     val allTasks: List<Task>
-        get() = order.map { id -> tasks[id]!! }
+        get() = order.map { id -> tasks.getValue(id) }
 
     fun getTask(id: TaskId): Task? = tasks[id]
 
@@ -88,7 +89,7 @@ class Dataset {
         val task = Task(id, name, null)
         tasks[id] = task
         order += id  // add to end of order
-        updates[id] = mutableMapOf("name" to now)
+        updates[id] = mutableMapOf("name" to now, "loc" to now)
         return task
     }
 
@@ -125,8 +126,8 @@ class Dataset {
 
     fun update(task: Task) {
         val now = Timestamp.now(clock)
-        val oldVersion = tasks[task.id]!!
-        val timestamps = this.updates[task.id]!!
+        val oldVersion = tasks.getValue(task.id)
+        val timestamps = this.updates.getValue(task.id)
         if (task.name != oldVersion.name) {
             timestamps["name"] = now
         }
@@ -134,6 +135,63 @@ class Dataset {
             timestamps["done"] = now
         }
         tasks[task.id] = task
+    }
+
+    /**
+     * Inserts a task into the order so that it comes before a given task.
+     * If `beforeTaskId` is `null`, inserts it at the end.
+     */
+    fun setTaskBefore(taskId: TaskId, beforeTaskId: TaskId?) {
+        val oldIdx = order.indexOf(taskId)
+        require(oldIdx >= 0) { "Task $taskId not in dataset" }
+        val now = Timestamp.now(clock)
+        if (beforeTaskId == null) {  // add to end
+            if (oldIdx != order.size - 1) {  // if we're not already at the end
+                order.removeAt(oldIdx)
+                if (order.isNotEmpty()) {  // update only new neighbor's loc timestamp
+                    updates.getValue(order.last())["loc"] = now
+                }
+                updates.getValue(taskId)["loc"] = now
+                order += taskId
+            }
+        } else if (beforeTaskId != taskId && beforeTaskId != order.getOrNull(oldIdx + 1)) {
+            order.remove(taskId)
+            val beforeIdx = order.indexOf(beforeTaskId)
+            require(beforeIdx >= 0) { "Task $beforeTaskId not in dataset" }
+            // update new neighbors' loc timestamps
+            updates.getValue(taskId)["loc"] = now
+            updates.getValue(beforeTaskId)["loc"] = now
+            order.add(beforeIdx, taskId)
+        }
+    }
+
+    /**
+     * Inserts a task into the order so that it comes after a given task.
+     * If `afterTaskId` is `null`, inserts it at the beginning.
+     */
+    fun setTaskAfter(taskId: TaskId, afterTaskId: TaskId?) {
+        val oldIdx = order.indexOf(taskId)
+        require(oldIdx >= 0) { "Task $taskId not in dataset" }
+        val now = Timestamp.now(clock)
+        if (afterTaskId == null) {  // add to beginning
+            if (oldIdx != 0) {  // if we're not already at the beginning
+                order.remove(taskId)
+                if (order.isNotEmpty()) {  // update only new neighbor's loc timestamp
+                    updates.getValue(order.first())["loc"] = now
+                }
+                updates.getValue(taskId)["loc"] = now
+                order.add(0, taskId)
+            }
+        } else if (afterTaskId != taskId && afterTaskId != order.getOrNull(oldIdx - 1)) {
+            order.remove(taskId)
+            val afterIdx = order.indexOf(afterTaskId)
+            require(afterIdx >= 0) { "Task $afterTaskId not in dataset" }
+            // update new neighbors' loc timestamps
+            val beforeTaskId = order.getOrNull(afterIdx - 1)
+            if (beforeTaskId != null) updates.getValue(beforeTaskId)["loc"] = now
+            updates.getValue(taskId)["loc"] = now
+            order.add(afterIdx + 1, taskId)
+        }
     }
 
     /**
@@ -150,12 +208,17 @@ class Dataset {
      * Gets the most recent update time for a given TaskId.
      * The task must exist in this Dataset.
      */
-    fun lastUpdate(id: TaskId): Timestamp = updates[id]!!.values.max()
+    fun lastUpdate(id: TaskId): Timestamp = updates.getValue(id).values.max()
 
     /**
      * Gets the most recent update time for any task in this Dataset, or null if there are no tasks.
      */
     fun lastUpdate(): Timestamp? = updates.values.maxOfOrNull { it.values.max() }
+
+    /**
+     * Gets the most recent order update for any task in this Dataset, or null if there are no tasks.
+     */
+    fun lastLocUpdate(): Timestamp? = updates.values.maxOfOrNull { it.getValue("loc") }
 
     /**
      * Synchronize this dataset by copying from another.
@@ -167,7 +230,7 @@ class Dataset {
      */
     fun updateFrom(other: Dataset) {
         // we only will need to check this for the order sync hack
-        val oldLastUpdate = if (this.order != other.order) this.lastUpdate() else null
+        val oldLastUpdate = if (this.order != other.order) this.lastLocUpdate() else null
         // Check for deletions in other
         for ((id, otherDeleted) in other.deleted) {
             val ourTask = this.tasks[id]
@@ -182,19 +245,21 @@ class Dataset {
             }
         }
         // Check for new and updated tasks in other
-        for ((id, otherTask) in other.tasks) {
+        // such that new items are added in their order
+        for (id in other.order) {
+            val otherTask = other.tasks.getValue(id)
             val ourDeleted = this.deleted[id]
             if (ourDeleted == null) {
                 val ourTask = this.tasks[id]
                 if (ourTask == null) { // new task from other
                     this.tasks[id] = otherTask.copy()
-                    this.updates[id] = other.updates[id]!!.toMutableMap()
+                    this.updates[id] = other.updates.getValue(id).toMutableMap()
                     this.order += id  // add to end of tasks
                 } else { // task exists in both; update individual fields
                     val updatedTask = ourTask.updateFrom(
                         otherTask,
-                        ourUpdates = this.updates[id]!!,
-                        otherUpdates = other.updates[id]!!
+                        ourUpdates = this.updates.getValue(id),
+                        otherUpdates = other.updates.getValue(id)
                     )
                     if (updatedTask != ourTask) {
                         this.tasks[id] = updatedTask
@@ -204,7 +269,7 @@ class Dataset {
                 // task was deleted here, but updated more recently in other
                 this.deleted -= id
                 this.tasks[id] = otherTask.copy()
-                this.updates[id] = other.updates[id]!!.toMutableMap()
+                this.updates[id] = other.updates.getValue(id).toMutableMap()
                 this.order += id  // add to end of tasks
             }
             // else: the task was most recently deleted
@@ -213,14 +278,13 @@ class Dataset {
            The above code is idempotent and commutative IF we can uniquely identify `this` vs
            `other` and we choose `this` to have precedence. One way to do this is by timestamps.
            If `other` should have precedence, redo the order based on `other.order`.
-           XXX Hack for timestamp: choose the newest timestamp that exists in the Dataset,
-           whatever it is for.
+           XXX Hack for timestamp: choose the newest ordering timestamp that exists in the Dataset
          */
         if (this.order != other.order) {
             // compare to our original last update, because we've modified ourselves
             // otherwise, the comparison between the unchanged other and the changed this
             // fails on some corner cases
-            if (nullsLast<Timestamp>().compare(other.lastUpdate(), oldLastUpdate) > 0) {
+            if (nullsLast<Timestamp>().compare(other.lastLocUpdate(), oldLastUpdate) > 0) {
                 /* Do the reverse of what we did above: instead of keeping our order for
                    undeleted items and add new items from them to the end, keep their order
                    for undeleted items and add our new items to the end.
@@ -230,6 +294,13 @@ class Dataset {
                 this.order.clear()
                 this.order.addAll(fromOther)
                 this.order.addAll(ours)
+            }
+        }
+        // ensure we have the most recent loc timestamps
+        for ((taskId, updates) in this.updates) {
+            val otherLoc = other.updates[taskId]?.get("loc")
+            if (otherLoc != null && otherLoc > updates.getValue("loc")) {
+                updates["loc"] = otherLoc
             }
         }
     }
@@ -259,6 +330,7 @@ class Dataset {
             val updates = this.updates[id]
             require(updates != null)
             require("name" in updates)
+            require("loc" in updates)
         }
     }
 
