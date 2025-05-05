@@ -141,7 +141,7 @@ class Dataset {
      * Inserts a task into the order so that it comes before a given task.
      * If `beforeTaskId` is `null`, inserts it at the end.
      */
-    fun setTaskBefore(taskId: TaskId, beforeTaskId: TaskId?) {
+    fun moveTaskBefore(taskId: TaskId, beforeTaskId: TaskId?) {
         val oldIdx = order.indexOf(taskId)
         require(oldIdx >= 0) { "Task $taskId not in dataset" }
         val now = Timestamp.now(clock)
@@ -169,7 +169,7 @@ class Dataset {
      * Inserts a task into the order so that it comes after a given task.
      * If `afterTaskId` is `null`, inserts it at the beginning.
      */
-    fun setTaskAfter(taskId: TaskId, afterTaskId: TaskId?) {
+    fun moveTaskAfter(taskId: TaskId, afterTaskId: TaskId?) {
         val oldIdx = order.indexOf(taskId)
         require(oldIdx >= 0) { "Task $taskId not in dataset" }
         val now = Timestamp.now(clock)

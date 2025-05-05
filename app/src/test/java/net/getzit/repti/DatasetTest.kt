@@ -242,14 +242,14 @@ class DatasetTest {
         }
     }
 
-    private data class DatasetModSetTaskAfter(
+    private data class DatasetModMoveTaskAfter(
         val moveIdx: UShort,
         val afterIdx: UShort?,
         override val timeInc: Duration
     ) : DatasetMod {
         override fun run(dataset: Dataset) {
             if (dataset.tasks.isNotEmpty()) {
-                dataset.setTaskAfter(
+                dataset.moveTaskAfter(
                     taskByIdx(dataset, moveIdx).id,
                     afterTaskId = if (afterIdx == null) null else taskByIdx(dataset, afterIdx).id
                 )
@@ -257,14 +257,14 @@ class DatasetTest {
         }
     }
 
-    private data class DatasetModSetTaskBefore(
+    private data class DatasetModMoveTaskBefore(
         val moveIdx: UShort,
         val beforeIdx: UShort?,
         override val timeInc: Duration
     ) : DatasetMod {
         override fun run(dataset: Dataset) {
             if (dataset.tasks.isNotEmpty()) {
-                dataset.setTaskBefore(
+                dataset.moveTaskBefore(
                     taskByIdx(dataset, moveIdx).id,
                     beforeTaskId = if (beforeIdx == null) null else taskByIdx(dataset, beforeIdx).id
                 )
@@ -279,8 +279,8 @@ class DatasetTest {
             2 -> DatasetModRenameTask(Arb.uShort().bind(), nameArb.bind(), timeInc)
             3 -> DatasetModSetTaskDone(Arb.uShort().bind(), dayArb.bind(), timeInc)
             4 -> DatasetModDelete(Arb.uShort().bind(), timeInc)
-            5 -> DatasetModSetTaskAfter(Arb.uShort().bind(), Arb.uShort().bind(), timeInc)
-            else -> DatasetModSetTaskBefore(Arb.uShort().bind(), Arb.uShort().bind(), timeInc)
+            5 -> DatasetModMoveTaskAfter(Arb.uShort().bind(), Arb.uShort().bind(), timeInc)
+            else -> DatasetModMoveTaskBefore(Arb.uShort().bind(), Arb.uShort().bind(), timeInc)
         }
     }
 
@@ -582,12 +582,12 @@ class DatasetTest {
     }
 
     @Test
-    fun testSetTaskAfterNoChange() {
+    fun testMoveTaskAfterNoChange() {
         runBlocking {
             checkAll(datasetArb(smallNameArb).filterNot { it.tasks.isEmpty() }) { dataset ->
                 val orig = dataset.copy()
                 for (i in orig.order.indices) {
-                    dataset.setTaskAfter(orig.order[i], orig.order.getOrNull(i - 1))
+                    dataset.moveTaskAfter(orig.order[i], orig.order.getOrNull(i - 1))
                     assertEquals(orig.order, dataset.order)
                 }
             }
@@ -595,12 +595,12 @@ class DatasetTest {
     }
 
     @Test
-    fun testSetTaskBeforeNoChange() {
+    fun testMoveTaskBeforeNoChange() {
         runBlocking {
             checkAll(datasetArb(smallNameArb).filterNot { it.tasks.isEmpty() }) { dataset ->
                 val orig = dataset.copy()
                 for (i in orig.order.indices) {
-                    dataset.setTaskBefore(orig.order[i], orig.order.getOrNull(i + 1))
+                    dataset.moveTaskBefore(orig.order[i], orig.order.getOrNull(i + 1))
                     assertEquals(orig.order, dataset.order)
                 }
             }
@@ -608,14 +608,14 @@ class DatasetTest {
     }
 
     @Test
-    fun testSetTaskBefore() {
+    fun testMoveTaskBefore() {
         val dataset = Dataset()
         val tasks = List(4) { i -> dataset.newTask(i.toString()) }
         for (toMove in tasks) {
             for (toMoveBefore in tasks) {
                 if (toMove != toMoveBefore) {
                     val copy = dataset.copy()
-                    copy.setTaskBefore(toMove.id, toMoveBefore.id)
+                    copy.moveTaskBefore(toMove.id, toMoveBefore.id)
                     val result = copy.allTasks
                     assertEquals(
                         result.indexOf(toMoveBefore) - 1,
@@ -627,14 +627,14 @@ class DatasetTest {
     }
 
     @Test
-    fun testSetTaskAfter() {
+    fun testMoveTaskAfter() {
         val dataset = Dataset()
         val tasks = List(4) { i -> dataset.newTask(i.toString()) }
         for (toMove in tasks) {
             for (toMoveAfter in tasks) {
                 if (toMove != toMoveAfter) {
                     val copy = dataset.copy()
-                    copy.setTaskAfter(toMove.id, toMoveAfter.id)
+                    copy.moveTaskAfter(toMove.id, toMoveAfter.id)
                     val result = copy.allTasks
                     assertEquals(
                         result.indexOf(toMoveAfter) + 1,
