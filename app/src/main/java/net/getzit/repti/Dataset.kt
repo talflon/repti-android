@@ -229,58 +229,76 @@ class Dataset {
      * @param other the dataset to copy changes from, which will not itself be modified.
      */
     fun updateFrom(other: Dataset) {
-        // we only will need to check this for the order sync hack
-        val oldLastUpdate = if (this.order != other.order) this.lastLocUpdate() else null
-        // Check for deletions in other
-        for ((id, otherDeleted) in other.deleted) {
-            val ourTask = this.tasks[id]
-            if (ourTask == null) {
+        if (this.order == other.order) {
+            for ((id, otherDeleted) in other.deleted) {
                 // ensure we have the most recent deletion timestamp
                 val ourDeleted = this.deleted[id]
                 if (ourDeleted == null || ourDeleted < otherDeleted) {
                     this.deleted[id] = otherDeleted
                 }
-            } else if (this.lastUpdate(id) <= otherDeleted) { // tie goes to deletion
-                delete(id, otherDeleted)
             }
-        }
-        // Check for new and updated tasks in other
-        // such that new items are added in their order
-        for (id in other.order) {
-            val otherTask = other.tasks.getValue(id)
-            val ourDeleted = this.deleted[id]
-            if (ourDeleted == null) {
+            for ((id, otherTask) in other.tasks) {
+                val ourTask = this.tasks[id]!!
+                val updatedTask = ourTask.updateFrom(
+                    otherTask,
+                    ourUpdates = this.updates.getValue(id),
+                    otherUpdates = other.updates.getValue(id)
+                )
+                if (updatedTask != ourTask) {
+                    this.tasks[id] = updatedTask
+                }
+            }
+        } else {
+            val oldLastUpdate = this.lastLocUpdate()
+            for ((id, otherDeleted) in other.deleted) {
                 val ourTask = this.tasks[id]
-                if (ourTask == null) { // new task from other
+                if (ourTask == null) {
+                    // ensure we have the most recent deletion timestamp
+                    val ourDeleted = this.deleted[id]
+                    if (ourDeleted == null || ourDeleted < otherDeleted) {
+                        this.deleted[id] = otherDeleted
+                    }
+                } else if (this.lastUpdate(id) <= otherDeleted) { // tie goes to deletion
+                    delete(id, otherDeleted)
+                }
+            }
+            // Check for deletions in other
+            // Check for new and updated tasks in other
+            // such that new items are added in their order
+            for (id in other.order) {
+                val otherTask = other.tasks.getValue(id)
+                val ourDeleted = this.deleted[id]
+                if (ourDeleted == null) {
+                    val ourTask = this.tasks[id]
+                    if (ourTask == null) { // new task from other
+                        this.tasks[id] = otherTask.copy()
+                        this.updates[id] = other.updates.getValue(id).toMutableMap()
+                        this.order += id  // add to end of tasks
+                    } else { // task exists in both; update individual fields
+                        val updatedTask = ourTask.updateFrom(
+                            otherTask,
+                            ourUpdates = this.updates.getValue(id),
+                            otherUpdates = other.updates.getValue(id)
+                        )
+                        if (updatedTask != ourTask) {
+                            this.tasks[id] = updatedTask
+                        }
+                    }
+                } else if (other.lastUpdate(id) > ourDeleted) { // tie goes to deletion
+                    // task was deleted here, but updated more recently in other
+                    this.deleted -= id
                     this.tasks[id] = otherTask.copy()
                     this.updates[id] = other.updates.getValue(id).toMutableMap()
                     this.order += id  // add to end of tasks
-                } else { // task exists in both; update individual fields
-                    val updatedTask = ourTask.updateFrom(
-                        otherTask,
-                        ourUpdates = this.updates.getValue(id),
-                        otherUpdates = other.updates.getValue(id)
-                    )
-                    if (updatedTask != ourTask) {
-                        this.tasks[id] = updatedTask
-                    }
                 }
-            } else if (other.lastUpdate(id) > ourDeleted) { // tie goes to deletion
-                // task was deleted here, but updated more recently in other
-                this.deleted -= id
-                this.tasks[id] = otherTask.copy()
-                this.updates[id] = other.updates.getValue(id).toMutableMap()
-                this.order += id  // add to end of tasks
+                // else: the task was most recently deleted
             }
-            // else: the task was most recently deleted
-        }
-        /* XXX Hack for the order:
-           The above code is idempotent and commutative IF we can uniquely identify `this` vs
-           `other` and we choose `this` to have precedence. One way to do this is by timestamps.
-           If `other` should have precedence, redo the order based on `other.order`.
-           XXX Hack for timestamp: choose the newest ordering timestamp that exists in the Dataset
-         */
-        if (this.order != other.order) {
+            /* XXX Hack for the order:
+               The above code is idempotent and commutative IF we can uniquely identify `this` vs
+               `other` and we choose `this` to have precedence. One way to do this is by timestamps.
+               If `other` should have precedence, redo the order based on `other.order`.
+               XXX Hack for timestamp: choose the newest ordering timestamp that exists in the Dataset
+             */
             // compare to our original last update, because we've modified ourselves
             // otherwise, the comparison between the unchanged other and the changed this
             // fails on some corner cases
