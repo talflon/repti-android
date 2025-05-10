@@ -284,6 +284,38 @@ class DatasetTest {
         }
     }
 
+    private val DATASET_MOD_ARB_CLASSES = listOf(
+        DatasetModNewTask::class,
+        DatasetModRenameTask::class,
+        DatasetModSetTaskDone::class,
+        DatasetModDelete::class,
+        DatasetModMoveTaskAfter::class,
+        DatasetModMoveTaskBefore::class,
+    )
+
+    // Tries to shrink quickly by removing all actions of the same type at once
+    private val datasetModListShrinker = Shrinker<List<DatasetMod>> { modList ->
+        val shrinks = mutableListOf<List<DatasetMod>>()
+        if (modList.isNotEmpty()) {
+            for (cls in DATASET_MOD_ARB_CLASSES) {
+                val shrunk = modList.filterNot { it::class == cls }
+                if (shrunk.size < modList.size)
+                    shrinks += shrunk
+            }
+            // Slow backup shrinking, by removing individual items
+            // Try the last and first ones first
+            shrinks += modList.toMutableList().also { it.removeLast() }
+            for (i in 0..<(modList.size - 1)) {
+                shrinks += modList.toMutableList().also { it.removeAt(i) }
+            }
+        }
+        shrinks
+    }
+
+    private val datasetModListArb = arbitrary(datasetModListShrinker) {
+        Arb.list(datasetModArb(smallNameArb)).bind()
+    }
+
     private fun datasetSerCopy(d: Dataset): Dataset =
         Json.decodeFromJsonElement(Json.encodeToJsonElement(d))
 
@@ -439,8 +471,8 @@ class DatasetTest {
         runBlocking {
             checkAll(
                 datasetArb(smallNameArb),
-                Arb.list(datasetModArb(smallNameArb)),
-                Arb.list(datasetModArb(smallNameArb))
+                datasetModListArb,
+                datasetModListArb,
             ) { dataset1, mods1, mods2 ->
                 val datasets = forkDataset(dataset1, listOf(mods1, mods2))
                 assertUpdateFromCommutative(datasets[0], datasets[1])
@@ -532,8 +564,8 @@ class DatasetTest {
         runBlocking {
             checkAll(
                 datasetArb(smallNameArb),
-                Arb.list(datasetModArb(smallNameArb)),
-                Arb.list(datasetModArb(smallNameArb))
+                datasetModListArb,
+                datasetModListArb,
             ) { dataset1, mods1, mods2 ->
                 val datasets = forkDataset(dataset1, listOf(mods1, mods2))
                 assertUpdateFromIdempotent(datasets[0], datasets[1])
@@ -544,7 +576,7 @@ class DatasetTest {
     @Test
     fun testUpdateFromEmpty() {
         runBlocking {
-            checkAll(Arb.list(datasetModArb(smallNameArb), 1..100)) { mods ->
+            checkAll(datasetModListArb.filterNot { it.isEmpty() }) { mods ->
                 val d1 = Dataset()
                 var now = datasetTimeOrDefault(d1)
                 for (mod in mods) {
