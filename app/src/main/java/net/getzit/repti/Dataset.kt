@@ -148,21 +148,15 @@ class Dataset {
         if (beforeTaskId == null) {  // add to end
             if (oldIdx != order.size - 1) {  // if we're not already at the end
                 order.removeAt(oldIdx)
-                if (order.isNotEmpty()) {  // update only new neighbor's loc timestamp
-                    updates.getValue(order.last())["loc"] = now
-                }
-                updates.getValue(taskId)["loc"] = now
                 order += taskId
             }
         } else if (beforeTaskId != taskId && beforeTaskId != order.getOrNull(oldIdx + 1)) {
             order.remove(taskId)
             val beforeIdx = order.indexOf(beforeTaskId)
             require(beforeIdx >= 0) { "Task $beforeTaskId not in dataset" }
-            // update new neighbors' loc timestamps
-            updates.getValue(taskId)["loc"] = now
-            updates.getValue(beforeTaskId)["loc"] = now
             order.add(beforeIdx, taskId)
         }
+        this.updates.getValue(taskId)["loc"] = now
     }
 
     /**
@@ -176,22 +170,15 @@ class Dataset {
         if (afterTaskId == null) {  // add to beginning
             if (oldIdx != 0) {  // if we're not already at the beginning
                 order.remove(taskId)
-                if (order.isNotEmpty()) {  // update only new neighbor's loc timestamp
-                    updates.getValue(order.first())["loc"] = now
-                }
-                updates.getValue(taskId)["loc"] = now
                 order.add(0, taskId)
             }
         } else if (afterTaskId != taskId && afterTaskId != order.getOrNull(oldIdx - 1)) {
             order.remove(taskId)
             val afterIdx = order.indexOf(afterTaskId)
             require(afterIdx >= 0) { "Task $afterTaskId not in dataset" }
-            // update new neighbors' loc timestamps
-            val beforeTaskId = order.getOrNull(afterIdx - 1)
-            if (beforeTaskId != null) updates.getValue(beforeTaskId)["loc"] = now
-            updates.getValue(taskId)["loc"] = now
             order.add(afterIdx + 1, taskId)
         }
+        this.updates.getValue(taskId)["loc"] = now
     }
 
     /**
@@ -229,6 +216,17 @@ class Dataset {
      * @param other the dataset to copy changes from, which will not itself be modified.
      */
     fun updateFrom(other: Dataset) {
+        fun updateTask(id: TaskId, ourTask: Task, otherTask: Task) {
+            val updatedTask = ourTask.updateFrom(
+                otherTask,
+                ourUpdates = this.updates.getValue(id),
+                otherUpdates = other.updates.getValue(id)
+            )
+            if (updatedTask != ourTask) {
+                this.tasks[id] = updatedTask
+            }
+        }
+
         if (this.order == other.order) {
             for ((id, otherDeleted) in other.deleted) {
                 // ensure we have the most recent deletion timestamp
@@ -238,18 +236,13 @@ class Dataset {
                 }
             }
             for ((id, otherTask) in other.tasks) {
-                val ourTask = this.tasks[id]!!
-                val updatedTask = ourTask.updateFrom(
-                    otherTask,
-                    ourUpdates = this.updates.getValue(id),
-                    otherUpdates = other.updates.getValue(id)
-                )
-                if (updatedTask != ourTask) {
-                    this.tasks[id] = updatedTask
-                }
+                updateTask(id, ourTask = this.tasks[id]!!, otherTask = otherTask)
             }
         } else {
-            val oldLastUpdate = this.lastLocUpdate()
+            // merge orders before we start modifying ourself
+            val newOrder = mergedOrder(other)
+
+            // Check for deletions in other
             for ((id, otherDeleted) in other.deleted) {
                 val ourTask = this.tasks[id]
                 if (ourTask == null) {
@@ -262,56 +255,29 @@ class Dataset {
                     delete(id, otherDeleted)
                 }
             }
-            // Check for deletions in other
-            // Check for new and updated tasks in other
-            // such that new items are added in their order
-            for (id in other.order) {
-                val otherTask = other.tasks.getValue(id)
+            for ((id, otherTask) in other.tasks) {
                 val ourDeleted = this.deleted[id]
                 if (ourDeleted == null) {
                     val ourTask = this.tasks[id]
                     if (ourTask == null) { // new task from other
                         this.tasks[id] = otherTask.copy()
                         this.updates[id] = other.updates.getValue(id).toMutableMap()
-                        this.order += id  // add to end of tasks
                     } else { // task exists in both; update individual fields
-                        val updatedTask = ourTask.updateFrom(
-                            otherTask,
-                            ourUpdates = this.updates.getValue(id),
-                            otherUpdates = other.updates.getValue(id)
-                        )
-                        if (updatedTask != ourTask) {
-                            this.tasks[id] = updatedTask
-                        }
+                        updateTask(id, ourTask = ourTask, otherTask = otherTask)
                     }
                 } else if (other.lastUpdate(id) > ourDeleted) { // tie goes to deletion
                     // task was deleted here, but updated more recently in other
                     this.deleted -= id
                     this.tasks[id] = otherTask.copy()
                     this.updates[id] = other.updates.getValue(id).toMutableMap()
-                    this.order += id  // add to end of tasks
                 }
                 // else: the task was most recently deleted
             }
-            /* XXX Hack for the order:
-               The above code is idempotent and commutative IF we can uniquely identify `this` vs
-               `other` and we choose `this` to have precedence. One way to do this is by timestamps.
-               If `other` should have precedence, redo the order based on `other.order`.
-               XXX Hack for timestamp: choose the newest ordering timestamp that exists in the Dataset
-             */
-            // compare to our original last update, because we've modified ourselves
-            // otherwise, the comparison between the unchanged other and the changed this
-            // fails on some corner cases
-            if (nullsLast<Timestamp>().compare(other.lastLocUpdate(), oldLastUpdate) > 0) {
-                /* Do the reverse of what we did above: instead of keeping our order for
-                   undeleted items and add new items from them to the end, keep their order
-                   for undeleted items and add our new items to the end.
-                 */
-                val fromOther = other.order.filter { this.tasks.contains(it) }
-                val ours = this.order.filterNot { fromOther.contains(it) }
-                this.order.clear()
-                this.order.addAll(fromOther)
-                this.order.addAll(ours)
+
+            this.order.clear()
+            for (id in newOrder) {
+                if (id in this.tasks)
+                    this.order += id
             }
         }
         // ensure we have the most recent loc timestamps
@@ -319,6 +285,65 @@ class Dataset {
             val otherLoc = other.updates[taskId]?.get("loc")
             if (otherLoc != null && otherLoc > updates.getValue("loc")) {
                 updates["loc"] = otherLoc
+            }
+        }
+    }
+
+    /**
+     * Returns if the other Dataset has a newer location for their taskId
+     */
+    private fun isTheirLocNewer(ourId: TaskId, other: Dataset, theirId: TaskId = ourId): Boolean =
+        nullsFirst<Timestamp>().compare(
+            other.updates[theirId]?.get("loc"),
+            this.updates[ourId]?.get("loc")
+        ) > 0
+
+    internal fun mergedOrder(other: Dataset): List<TaskId> {
+        // Prepare queues of the items whose locations we trust,
+        // because they weren't moved more recently in the other.
+        // Ones whose locations have equal times stay in both queues.
+        // Add in reverse order for more efficient stack pop later.
+        val fromUs = ArrayDeque<TaskId>()
+        for (id in this.order.reversed()) {
+            if (!this.isTheirLocNewer(id, other))
+                fromUs += id
+        }
+        val fromThem = ArrayDeque<TaskId>()
+        for (id in other.order.reversed()) {
+            if (!other.isTheirLocNewer(id, this))
+                fromThem += id
+        }
+        val newOrder = mutableListOf<TaskId>()
+        while (true) {
+            // Iteratively pop the item from the front of each order with the
+            // most recently updated location.
+            val ourId = fromUs.lastOrNull()
+            val theirId = fromThem.lastOrNull()
+            if (ourId == null) {
+                if (theirId == null) {  // done
+                    return newOrder
+                } else {  // add rest of fromThem
+                    fromThem.removeLast()
+                    if (!newOrder.contains(theirId)) {
+                        newOrder += theirId
+                    }
+                }
+            } else if (theirId == null) {  // add rest of fromUs
+                fromUs.removeLast()
+                if (!newOrder.contains(ourId)) {
+                    newOrder += ourId
+                }
+            } else if (newOrder.contains(ourId)) {  // skip duplicate
+                fromUs.removeLast()
+            } else if (newOrder.contains(theirId)) {  // skip duplicate
+                fromThem.removeLast()
+            } else if (ourId == theirId) {
+                newOrder += fromUs.removeLast()
+                fromThem.removeLast()
+            } else if (isTheirLocNewer(ourId, other, theirId)) {
+                newOrder += fromThem.removeLast()
+            } else {
+                newOrder += fromUs.removeLast()
             }
         }
     }

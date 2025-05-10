@@ -639,47 +639,85 @@ class DatasetTest {
         }
     }
 
-    @Test
-    fun testMoveTaskBefore() {
+    private inline fun checkMoveTask(
+        moveMethod: Dataset.(TaskId, TaskId) -> Unit,  // moveTaskBefore or moveTaskAfter
+        check: (Dataset, Dataset, Task, Task) -> Unit
+    ) {
         val dataset = Dataset()
-        val tasks = List(4) { i -> dataset.newTask(i.toString()) }
+        val clock = MockClock.default()
+        dataset.clock = clock
+        val tasks = List(4) { i -> clock.tick(1); dataset.newTask(i.toString()) }
         for (toMove in tasks) {
-            for (toMoveBefore in tasks) {
-                if (toMove != toMoveBefore) {
+            for (toMoveBy in tasks) {
+                if (toMove != toMoveBy) {
                     val copy = dataset.copy()
-                    copy.moveTaskBefore(toMove.id, toMoveBefore.id)
-                    val result = copy.allTasks
-                    assertEquals(
-                        result.indexOf(toMoveBefore) - 1,
-                        result.indexOf(toMove)
-                    )
+                    copy.clock = clock
+                    clock.tick(1)
+                    moveMethod(copy, toMove.id, toMoveBy.id)
+                    clock.tick(1)
+                    check(dataset, copy, toMove, toMoveBy)
                 }
             }
         }
     }
 
     @Test
-    fun testMoveTaskAfter() {
-        val dataset = Dataset()
-        val tasks = List(4) { i -> dataset.newTask(i.toString()) }
-        for (toMove in tasks) {
-            for (toMoveAfter in tasks) {
-                if (toMove != toMoveAfter) {
-                    val copy = dataset.copy()
-                    copy.moveTaskAfter(toMove.id, toMoveAfter.id)
-                    val result = copy.allTasks
-                    assertEquals(
-                        result.indexOf(toMoveAfter) + 1,
-                        result.indexOf(toMove)
-                    )
-                }
-            }
+    fun testMoveTaskBeforeMoves() {
+        checkMoveTask(Dataset::moveTaskBefore) { _, new, toMove, toMoveBefore ->
+            val result = new.allTasks
+            assertEquals(
+                result.indexOf(toMoveBefore) - 1,
+                result.indexOf(toMove)
+            )
+        }
+    }
+
+    @Test
+    fun testMoveTaskBeforeValid() {
+        checkMoveTask(Dataset::moveTaskBefore) { old, new, _, _ ->
+            assertEquals(old.allTasks.toSet(), new.allTasks.toSet())
+            new.requireValid()
+        }
+    }
+
+    @Test
+    fun testMoveTaskBeforeUpdate() {
+        checkMoveTask(Dataset::moveTaskBefore) { old, new, _, _ ->
+            assertDatasetsEqual(
+                new, old.copy().also { it.updateFrom(new) })
+        }
+    }
+
+    @Test
+    fun testMoveTaskAfterMoves() {
+        checkMoveTask(Dataset::moveTaskAfter) { _, new, toMove, toMoveAfter ->
+            val result = new.allTasks
+            assertEquals(
+                result.indexOf(toMoveAfter) + 1,
+                result.indexOf(toMove)
+            )
+        }
+    }
+
+    @Test
+    fun testMoveTaskAfterValid() {
+        checkMoveTask(Dataset::moveTaskAfter) { old, new, _, _ ->
+            assertEquals(old.allTasks.toSet(), new.allTasks.toSet())
+            new.requireValid()
+        }
+    }
+
+    @Test
+    fun testMoveTaskAfterUpdate() {
+        checkMoveTask(Dataset::moveTaskAfter) { old, new, _, _ ->
+            assertDatasetsEqual(
+                new, old.copy().also { it.updateFrom(new) })
         }
     }
 }
 
-fun assertDatasetsEqual(d1: Dataset, d2: Dataset) {
-    JSONAssert.assertEquals(Json.encodeToString(d1), Json.encodeToString(d2), true)
+fun assertDatasetsEqual(expected: Dataset, actual: Dataset) {
+    JSONAssert.assertEquals(Json.encodeToString(expected), Json.encodeToString(actual), true)
 }
 
 fun assertDatasetsNotEqual(d1: Dataset, d2: Dataset) {
