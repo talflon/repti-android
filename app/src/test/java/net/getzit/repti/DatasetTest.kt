@@ -646,16 +646,13 @@ class DatasetTest {
         val dataset = Dataset()
         val clock = MockClock.default()
         dataset.clock = clock
-        val tasks = List(4) { i -> clock.tick(1); dataset.newTask(i.toString()) }
+        val tasks = List(4) { i -> clock.tick(); dataset.newTask(i.toString()) }
         for (toMove in tasks) {
             for (toMoveBy in tasks) {
                 if (toMove != toMoveBy) {
-                    val copy = dataset.copy()
-                    copy.clock = clock
-                    clock.tick(1)
-                    moveMethod(copy, toMove.id, toMoveBy.id)
-                    clock.tick(1)
-                    check(dataset, copy, toMove, toMoveBy)
+                    val copy = dataset.copy().also { it.clock = clock }
+                    clock.tick(); moveMethod(copy, toMove.id, toMoveBy.id)
+                    clock.tick(); check(dataset, copy, toMove, toMoveBy)
                 }
             }
         }
@@ -713,6 +710,69 @@ class DatasetTest {
             assertDatasetsEqual(
                 new, old.copy().also { it.updateFrom(new) })
         }
+    }
+
+    @Test
+    fun testTwoMovesPicksNewerAfter() {
+        val clock = MockClock.default()
+        val dataset1 = Dataset().also { it.clock = clock }
+        val tasks = List(5) { i -> clock.tick(); dataset1.newTask(i.toString()) }
+        val dataset2 = dataset1.copy().also { it.clock = clock }
+        clock.tick(); dataset1.moveTaskBefore(tasks[2].id, tasks[1].id)
+        clock.tick(); dataset2.moveTaskAfter(tasks[2].id, tasks[3].id)
+        val expectedOrder = dataset2.allTasks.map { it.name }
+        clock.tick(); dataset1.updateFrom(dataset2)
+        assertEquals(expectedOrder, dataset1.allTasks.map { it.name })
+    }
+
+    @Test
+    fun testTwoMovesPicksNewerBefore() {
+        val clock = MockClock.default()
+        val dataset1 = Dataset().also { it.clock = clock }
+        val tasks = List(5) { i -> clock.tick(); dataset1.newTask(i.toString()) }
+        val dataset2 = dataset1.copy().also { it.clock = clock }
+        clock.tick(); dataset1.moveTaskAfter(tasks[2].id, tasks[3].id)
+        clock.tick(); dataset2.moveTaskBefore(tasks[2].id, tasks[1].id)
+        val expectedOrder = dataset2.allTasks.map { it.name }
+        clock.tick(); dataset1.updateFrom(dataset2)
+        assertEquals(expectedOrder, dataset1.allTasks.map { it.name })
+    }
+
+    @Test
+    fun testNewItemsFromOlderOrder() {
+        val clock = MockClock.default()
+        val dataset1 = Dataset().also { it.clock = clock }
+        val tasks = List(5) { i -> clock.tick(); dataset1.newTask(i.toString()) }
+        val dataset2 = dataset1.copy().also { it.clock = clock }
+        clock.tick(); dataset2.newTask("A")
+        clock.tick(); dataset2.moveTaskAfter(dataset2.newTask("B").id, null)
+        clock.tick(); dataset1.moveTaskBefore(tasks[3].id, tasks[2].id)
+        clock.tick(); dataset1.updateFrom(dataset2)
+        assertEquals(listOf("B", "0", "1", "3", "2", "4", "A"), dataset1.allTasks.map { it.name })
+    }
+
+    @Test
+    fun testConcurrentOrderChangesSeparated() {
+        val clock = MockClock.default()
+        val dataset1 = Dataset().also { it.clock = clock }
+        val tasks = List(5) { i -> clock.tick(); dataset1.newTask(i.toString()) }
+        val dataset2 = dataset1.copy().also { it.clock = clock }
+        clock.tick(); dataset1.moveTaskBefore(tasks[1].id, tasks[0].id)
+        clock.tick(); dataset2.moveTaskAfter(tasks[3].id, tasks[4].id)
+        clock.tick(); dataset1.updateFrom(dataset2)
+        assertEquals(listOf("1", "0", "2", "4", "3"), dataset1.allTasks.map { it.name })
+    }
+
+    @Test
+    fun testConcurrentOrderChangesEnclosing() {
+        val clock = MockClock.default()
+        val dataset1 = Dataset().also { it.clock = clock }
+        val tasks = List(5) { i -> clock.tick(); dataset1.newTask(i.toString()) }
+        val dataset2 = dataset1.copy().also { it.clock = clock }
+        clock.tick(); dataset1.moveTaskBefore(tasks[4].id, tasks[0].id)
+        clock.tick(); dataset2.moveTaskAfter(tasks[1].id, tasks[2].id)
+        clock.tick(); dataset1.updateFrom(dataset2)
+        assertEquals(listOf("4", "0", "2", "1", "3"), dataset1.allTasks.map { it.name })
     }
 }
 
