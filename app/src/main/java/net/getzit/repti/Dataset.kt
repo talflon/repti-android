@@ -203,11 +203,6 @@ class Dataset {
     fun lastUpdate(): Timestamp? = updates.values.maxOfOrNull { it.values.max() }
 
     /**
-     * Gets the most recent order update for any task in this Dataset, or null if there are no tasks.
-     */
-    fun lastLocUpdate(): Timestamp? = updates.values.maxOfOrNull { it.getValue("loc") }
-
-    /**
      * Synchronize this dataset by copying from another.
      *
      * Only copies newer changes. When there are competing changes with the same timestamp,
@@ -275,10 +270,7 @@ class Dataset {
             }
 
             this.order.clear()
-            for (id in newOrder) {
-                if (id in this.tasks)
-                    this.order += id
-            }
+            newOrder.filterTo(this.order) { it in this.tasks }
         }
         // ensure we have the most recent loc timestamps
         for ((taskId, updates) in this.updates) {
@@ -290,13 +282,45 @@ class Dataset {
     }
 
     /**
+     * Compares location timestamps with another Dataset, for given id(s)
+     */
+    private fun compareLocs(ourId: TaskId, other: Dataset, theirId: TaskId = ourId): Int =
+        nullsFirst<Timestamp>().compare(
+            this.updates[ourId]?.get("loc"),
+            other.updates[theirId]?.get("loc")
+        )
+
+    /**
+     * Compares all location timestamps to determine which is overall a "newer" ordering
+     */
+    private fun compareLocs(other: Dataset): Int {
+        val ourLocs = ArrayDeque<Timestamp>()
+        this.updates.values.mapNotNullTo(ourLocs) { it["loc"] }
+        ourLocs.sort()
+        val theirLocs = ArrayDeque<Timestamp>()
+        other.updates.values.mapNotNullTo(theirLocs) { it["loc"] }
+        theirLocs.sort()
+        while (true) {
+            if (ourLocs.isEmpty()) {
+                return if (theirLocs.isEmpty()) 0 else -1
+            } else if (theirLocs.isEmpty()) {
+                return 1
+            } else {
+                val cmp = ourLocs.last().compareTo(theirLocs.last())
+                if (cmp != 0) return cmp
+                else {
+                    ourLocs.removeLast()
+                    theirLocs.removeLast()
+                }
+            }
+        }
+    }
+
+    /**
      * Returns if the other Dataset has a newer location for their taskId
      */
-    private fun isTheirLocNewer(ourId: TaskId, other: Dataset, theirId: TaskId = ourId): Boolean =
-        nullsFirst<Timestamp>().compare(
-            other.updates[theirId]?.get("loc"),
-            this.updates[ourId]?.get("loc")
-        ) > 0
+    private fun isTheirLocNewer(taskId: TaskId, other: Dataset): Boolean =
+        compareLocs(taskId, other, taskId) < 0
 
     internal fun mergedOrder(other: Dataset): List<TaskId> {
         // Prepare queues of the items whose locations we trust,
@@ -304,16 +328,11 @@ class Dataset {
         // Ones whose locations have equal times stay in both queues.
         // Add in reverse order for more efficient stack pop later.
         val fromUs = ArrayDeque<TaskId>()
-        for (id in this.order.reversed()) {
-            if (!this.isTheirLocNewer(id, other))
-                fromUs += id
-        }
+        this.order.reversed().filterTo(fromUs) { !this.isTheirLocNewer(it, other) }
         val fromThem = ArrayDeque<TaskId>()
-        for (id in other.order.reversed()) {
-            if (!other.isTheirLocNewer(id, this))
-                fromThem += id
-        }
+        other.order.reversed().filterTo(fromThem) { !other.isTheirLocNewer(it, this) }
         val newOrder = mutableListOf<TaskId>()
+        val theirOrderOverallNewer: Boolean by lazy { this.compareLocs(other) > 0 }
         while (true) {
             // Iteratively pop the item from the front of each order with the
             // most recently updated location.
@@ -340,10 +359,15 @@ class Dataset {
             } else if (ourId == theirId) {
                 newOrder += fromUs.removeLast()
                 fromThem.removeLast()
-            } else if (isTheirLocNewer(ourId, other, theirId)) {
-                newOrder += fromThem.removeLast()
             } else {
-                newOrder += fromUs.removeLast()
+                val cmp = compareLocs(ourId, other, theirId)
+                newOrder += if (cmp > 0) {
+                    fromUs.removeLast()
+                } else if (cmp < 0 || theirOrderOverallNewer) {
+                    fromThem.removeLast()
+                } else {  // even the tiebreaker is even. Just keep our own
+                    fromUs.removeLast()
+                }
             }
         }
     }
