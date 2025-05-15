@@ -24,6 +24,7 @@ material = "1.12.0"
 robolectric = "4.14.1"
 about_libraries = "11.2.3"
 lifecycle = "2.8.7"
+kover = "0.9.1"
 
 [libraries]
 dokka-android = { module = "org.jetbrains.dokka:android-documentation-plugin", version.ref = "dokka" }
@@ -62,3 +63,4 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 about-libraries = { id = "com.mikepenz.aboutlibraries.plugin", version.ref = "about_libraries" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }

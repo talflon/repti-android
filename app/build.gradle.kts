@@ -10,6 +10,7 @@ plugins {
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.dokka)
     alias(libs.plugins.about.libraries)
+    alias(libs.plugins.kover)
 }
 
 android {

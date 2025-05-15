@@ -11,4 +11,5 @@ plugins {
     alias(libs.plugins.kotlin.parcelize) apply false
     alias(libs.plugins.dokka) apply false
     alias(libs.plugins.about.libraries) apply false
+    alias(libs.plugins.kover) apply false
 }
