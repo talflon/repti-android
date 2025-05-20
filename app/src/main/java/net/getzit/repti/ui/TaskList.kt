@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -125,38 +126,44 @@ fun TaskListItem(
     SwipeToDismissBox(
         state = swipeState,
         enableDismissFromEndToStart = false,
-        backgroundContent = { Box(Modifier.fillMaxSize().background(colorScheme.secondary)) }
+        backgroundContent = { Box(Modifier.fillMaxSize().background(colorScheme.background)) }
     ) {
-        Row(
+        Box(
             Modifier
-                .background(if (selected) colorScheme.secondaryContainer else colorScheme.background)
                 .defaultMinSize(minHeight = 24.dp)
                 .padding(4.dp)
-                .selectable(
-                    selected = selected,
-                    onClick = onClick,
-                ),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .clip(RoundedCornerShape(8.dp))
+                .background(if (selected) colorScheme.secondary else colorScheme.secondaryContainer)
         ) {
-            Text(
-                text = task.name,
-                style = typography.headlineMedium,
-                modifier = Modifier.weight(1f)
-            )
-            if (task.done != null) {
-                Spacer(Modifier.width(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = formatDoneDaysAgo(task.done),
-                        style = typography.labelLarge
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Icon(
-                        Icons.Rounded.Done,
-                        stringResource(R.string.lbl_done),
-                        tint = colorScheme.primary
-                    )
+            Row(
+                Modifier
+                    .padding(4.dp)
+                    .selectable(
+                        selected = selected,
+                        onClick = onClick,
+                    ),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = task.name,
+                    style = typography.headlineMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                if (task.done != null) {
+                    Spacer(Modifier.width(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = formatDoneDaysAgo(task.done),
+                            style = typography.labelLarge
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            Icons.Rounded.Done,
+                            stringResource(R.string.lbl_done),
+                            tint = colorScheme.primary
+                        )
+                    }
                 }
             }
         }
