@@ -322,6 +322,11 @@ class Dataset {
     private fun isTheirLocNewer(taskId: TaskId, other: Dataset): Boolean =
         compareLocs(taskId, other, taskId) < 0
 
+    /**
+     * Returns an order that's merged from the two Datasets,
+     * resolving conflicts based on which positions are newer.
+     * Does not modify either Dataset.
+     */
     internal fun mergedOrder(other: Dataset): List<TaskId> {
         // Prepare queues of the items whose locations we trust,
         // because they weren't moved more recently in the other.
@@ -332,7 +337,14 @@ class Dataset {
         val fromThem = ArrayDeque<TaskId>()
         other.order.reversed().filterTo(fromThem) { !other.isTheirLocNewer(it, this) }
         val newOrder = mutableListOf<TaskId>()
-        val theirOrderOverallNewer: Boolean by lazy { this.compareLocs(other) > 0 }
+        // comparison of the overall ordering, to use when we have no good way to choose
+        val tiebreakerComparison: Int by lazy {
+            this.compareLocs(other) orCompare {
+                (compareBy<Dataset> { d -> d.order.joinToString(",") { it.string } })
+                    .compare(this, other)
+            }
+        }
+
         while (true) {
             // Iteratively pop the item from the front of each order with the
             // most recently updated location.
@@ -343,31 +355,29 @@ class Dataset {
                     return newOrder
                 } else {  // add rest of fromThem
                     fromThem.removeLast()
-                    if (!newOrder.contains(theirId)) {
+                    if (theirId !in newOrder) {
                         newOrder += theirId
                     }
                 }
             } else if (theirId == null) {  // add rest of fromUs
                 fromUs.removeLast()
-                if (!newOrder.contains(ourId)) {
+                if (ourId !in newOrder) {
                     newOrder += ourId
                 }
-            } else if (newOrder.contains(ourId)) {  // skip duplicate
+            } else if (ourId in newOrder) {  // skip duplicate
                 fromUs.removeLast()
-            } else if (newOrder.contains(theirId)) {  // skip duplicate
+            } else if (theirId in newOrder) {  // skip duplicate
                 fromThem.removeLast()
             } else if (ourId == theirId) {
                 newOrder += fromUs.removeLast()
                 fromThem.removeLast()
             } else {
-                val cmp = compareLocs(ourId, other, theirId)
-                newOrder += if (cmp > 0) {
-                    fromUs.removeLast()
-                } else if (cmp < 0 || theirOrderOverallNewer) {
-                    fromThem.removeLast()
-                } else {  // even the tiebreaker is even. Just keep our own
-                    fromUs.removeLast()
-                }
+                val whose = if ((this.compareLocs(ourId, other, theirId)
+                            orCompare { tiebreakerComparison }) > 0
+                ) {
+                    fromUs
+                } else fromThem
+                newOrder += whose.removeLast()
             }
         }
     }
@@ -575,3 +585,6 @@ data class Task(val id: TaskId, val name: String, val done: Day?) {
         }
     }
 }
+
+private inline infix fun Int.orCompare(comparison: () -> Int) =
+    if (this != 0) this else comparison()

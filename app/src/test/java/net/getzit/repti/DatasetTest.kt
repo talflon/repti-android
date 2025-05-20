@@ -304,7 +304,7 @@ class DatasetTest {
             }
             // Slow backup shrinking, by removing individual items
             // Try the last and first ones first
-            shrinks += modList.toMutableList().also { it.removeLast() }
+            shrinks += modList.toMutableList().also { it.removeAt(modList.size - 1) }
             for (i in 0..<(modList.size - 1)) {
                 shrinks += modList.toMutableList().also { it.removeAt(i) }
             }
@@ -773,6 +773,20 @@ class DatasetTest {
         clock.tick(); dataset2.moveTaskAfter(tasks[1].id, tasks[2].id)
         clock.tick(); dataset1.updateFrom(dataset2)
         assertEquals(listOf("4", "0", "2", "1", "3"), dataset1.allTasks.map { it.name })
+    }
+
+    @Test
+    fun testUpdateFromOrderWithTiebreakerCommutative() {
+        val clock = MockClock.default()
+        val dataset1 = Dataset().also { it.clock = clock }
+        val tasks = "ABCDE".associateWith { c -> clock.tick(); dataset1.newTask(c.toString()) }
+        val dataset2 = dataset1.copy().also { it.clock = clock }
+        clock.tick()
+        // concurrent moves to same item should mean we need a tiebreaker
+        dataset1.moveTaskBefore(tasks['C']!!.id, tasks['B']!!.id)
+        dataset2.moveTaskAfter(tasks['C']!!.id, tasks['D']!!.id)
+        clock.tick()
+        assertUpdateFromCommutative(dataset1, dataset2)
     }
 }
 
