@@ -68,6 +68,8 @@ dependencies {
     implementation(libs.android.material)
     implementation(libs.about.libraries.compose.m3)
     implementation(libs.androidx.lifecycle.process)
+    implementation(libs.reorderable)
+    implementation(libs.compose.material.icons)
     testImplementation(libs.junit)
     testImplementation(libs.kotest.property)
     testImplementation(libs.jsonassert)

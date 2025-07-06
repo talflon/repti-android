@@ -9,7 +9,6 @@ import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescriptionExactly
-import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -29,10 +28,10 @@ abstract class MainActivityTaskTester : MainActivityTester() {
         inActivity {
             with(composeRule) {
                 onNode(isButton(R.string.cmd_create_new_task) and isNotInMenu()).performClick()
-                onNode(isDialog()).assertIsDisplayed()
-                onNode(hasAnyAncestor(isDialog()) and isFocused()).performTextInput(taskName)
-                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_create)).performClick()
-                onNode(isDialog()).assertIsNotDisplayed()
+                onNode(isDialog(R.string.ttl_new_task)).assertIsDisplayed()
+                onNode(hasAnyAncestor(isDialog(R.string.ttl_new_task)) and isFocused()).performTextInput(taskName)
+                onNode(hasAnyAncestor(isDialog(R.string.ttl_new_task)) and isButton(R.string.cmd_create)).performClick()
+                onNode(isDialog(R.string.ttl_new_task)).assertIsNotDisplayed()
                 waitForIdle()
             }
             val tasks = TaskRepository.instance.tasks.value!!
@@ -48,10 +47,10 @@ abstract class MainActivityTaskTester : MainActivityTester() {
             with(composeRule) {
                 onNode(isButton(R.string.cmd_menu)).performClick()
                 onNode(isButton(R.string.cmd_create_new_task) and isInMenu()).performClick()
-                onNode(isDialog()).assertIsDisplayed()
-                onNode(hasAnyAncestor(isDialog()) and isFocused()).performTextInput(taskName)
-                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_create)).performClick()
-                onNode(isDialog()).assertIsNotDisplayed()
+                onNode(isDialog(R.string.ttl_new_task)).assertIsDisplayed()
+                onNode(hasAnyAncestor(isDialog(R.string.ttl_new_task)) and isFocused()).performTextInput(taskName)
+                onNode(hasAnyAncestor(isDialog(R.string.ttl_new_task)) and isButton(R.string.cmd_create)).performClick()
+                onNode(isDialog(R.string.ttl_new_task)).assertIsNotDisplayed()
                 waitForIdle()
             }
             val tasks = TaskRepository.instance.tasks.value!!
@@ -65,10 +64,10 @@ abstract class MainActivityTaskTester : MainActivityTester() {
         inActivity {
             with(composeRule) {
                 onNode(isButton(R.string.cmd_create_new_task) and isNotInMenu()).performClick()
-                onNode(isDialog()).assertIsDisplayed()
-                onNode(hasAnyAncestor(isDialog()) and isFocused()).performTextInput("  name   ")
-                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_create)).performClick()
-                onNode(isDialog()).assertIsNotDisplayed()
+                onNode(isDialog(R.string.ttl_new_task)).assertIsDisplayed()
+                onNode(hasAnyAncestor(isDialog(R.string.ttl_new_task)) and isFocused()).performTextInput("  name   ")
+                onNode(hasAnyAncestor(isDialog(R.string.ttl_new_task)) and isButton(R.string.cmd_create)).performClick()
+                onNode(isDialog(R.string.ttl_new_task)).assertIsNotDisplayed()
                 waitForIdle()
             }
             val tasks = TaskRepository.instance.tasks.value!!
@@ -81,9 +80,9 @@ abstract class MainActivityTaskTester : MainActivityTester() {
     fun testCancelNewTask(): Unit = inActivity {
         with(composeRule) {
             onNode(isButton(R.string.cmd_create_new_task) and isNotInMenu()).performClick()
-            onNode(isDialog()).assertIsDisplayed()
-            onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_cancel)).performClick()
-            onNode(isDialog()).assertIsNotDisplayed()
+            onNode(isDialog(R.string.ttl_new_task)).assertIsDisplayed()
+            onNode(hasAnyAncestor(isDialog(R.string.ttl_new_task)) and isButton(R.string.cmd_cancel)).performClick()
+            onNode(isDialog(R.string.ttl_new_task)).assertIsNotDisplayed()
         }
     }
 
@@ -92,7 +91,8 @@ abstract class MainActivityTaskTester : MainActivityTester() {
         inActivity {
             with(composeRule) {
                 onNode(isButton(R.string.cmd_create_new_task) and isNotInMenu()).performClick()
-                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_create)).performClick()
+                val inDialog = hasAnyAncestor(isDialog(R.string.ttl_new_task))
+                onNode(inDialog and isButton(R.string.cmd_create)).performClick()
                 waitForIdle()
             }
             assertEquals(emptyList<Task>(), TaskRepository.instance.tasks.value)
@@ -104,9 +104,10 @@ abstract class MainActivityTaskTester : MainActivityTester() {
         inActivity {
             with(composeRule) {
                 onNode(isButton(R.string.cmd_create_new_task) and isNotInMenu()).performClick()
-                onNode(hasAnyAncestor(isDialog()) and isFocused()).performTextInput("blah blah")
-                onNode(hasAnyAncestor(isDialog()) and isFocused()).performTextClearance()
-                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_create)).performClick()
+                val inDialog = hasAnyAncestor(isDialog(R.string.ttl_new_task))
+                onNode(inDialog and isFocused()).performTextInput("blah blah")
+                onNode(inDialog and isFocused()).performTextClearance()
+                onNode(inDialog and isButton(R.string.cmd_create)).performClick()
                 waitForIdle()
             }
             assertEquals(emptyList<Task>(), TaskRepository.instance.tasks.value)
@@ -235,9 +236,9 @@ abstract class MainActivityTaskTester : MainActivityTester() {
             selectTaskByName(taskName)
             with(composeRule) {
                 onNode(hasAnyAncestor(isDetailsCard()) and isButton(R.string.cmd_delete)).performClick()
-                onNode(isDialog()).assertIsDisplayed()
-                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_delete)).performClick()
-                onNode(isDialog()).assertIsNotDisplayed()
+                onNode(isDialog(R.string.ttl_delete_task)).assertIsDisplayed()
+                onNode(hasAnyAncestor(isDialog(R.string.ttl_delete_task)) and isButton(R.string.cmd_delete)).performClick()
+                onNode(isDialog(R.string.ttl_delete_task)).assertIsNotDisplayed()
                 assertNoDetailsCardVisible()
                 onNode(isTaskItemByName(taskName), true).assertDoesNotExist()
                 waitForIdle()
@@ -256,8 +257,8 @@ abstract class MainActivityTaskTester : MainActivityTester() {
             selectTaskByName(taskName)
             with(composeRule) {
                 onNode(hasAnyAncestor(isDetailsCard()) and isButton(R.string.cmd_delete)).performClick()
-                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_cancel)).performClick()
-                onNode(isDialog()).assertIsNotDisplayed()
+                onNode(hasAnyAncestor(isDialog(R.string.ttl_delete_task)) and isButton(R.string.cmd_cancel)).performClick()
+                onNode(isDialog(R.string.ttl_delete_task)).assertIsNotDisplayed()
                 assertDetailsCardVisible(taskName)
                 getTaskItemByName(taskName).assertExists()
                 waitForIdle()
@@ -278,13 +279,15 @@ abstract class MainActivityTaskTester : MainActivityTester() {
             selectTaskByName(origName)
             with(composeRule) {
                 onNode(hasAnyAncestor(isDetailsCard()) and isButton(R.string.cmd_edit_task)).performClick()
-                onNode(hasAnyAncestor(isDialog()) and hasContentDescriptionExactly(getString(R.string.lbl_name))).run {
+                val inDialog = hasAnyAncestor(isDialog(R.string.ttl_edit_task))
+                onNode(inDialog and hasContentDescriptionExactly(getString(R.string.lbl_name))).run {
                     assertTextEquals(getString(R.string.lbl_name), origName)
                     performTextClearance()
                     performTextInput(newName)
                 }
-                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_save)).performClick()
-                onNode(isDialog()).assertIsNotDisplayed()
+                onNode(inDialog and isButton(R.string.cmd_save)).performClick()
+                onNode(inDialog and isButton(R.string.cmd_save)).assertIsNotDisplayed()
+                onNode(isDialog(R.string.ttl_edit_task)).assertIsNotDisplayed()
                 assertDetailsCardVisible(newName)   // rarely, this is still showing the old name. why?
                 getTaskItemByName(newName).assertExists()
                 waitForIdle()
@@ -306,12 +309,13 @@ abstract class MainActivityTaskTester : MainActivityTester() {
             selectTaskByName(origName)
             with(composeRule) {
                 onNode(hasAnyAncestor(isDetailsCard()) and isButton(R.string.cmd_edit_task)).performClick()
-                onNode(hasAnyAncestor(isDialog()) and hasContentDescriptionExactly(getString(R.string.lbl_name))).run {
+                val inDialog = hasAnyAncestor(isDialog(R.string.ttl_edit_task))
+                onNode(inDialog and hasContentDescriptionExactly(getString(R.string.lbl_name))).run {
                     performTextClearance()
                     performTextInput(newName)
                 }
-                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_cancel)).performClick()
-                onNode(isDialog()).assertIsNotDisplayed()
+                onNode(inDialog and isButton(R.string.cmd_cancel)).performClick()
+                onNode(isDialog(R.string.ttl_edit_task)).assertIsNotDisplayed()
                 assertDetailsCardVisible(origName)
                 getTaskItemByName(origName).assertExists()
                 waitForIdle()
@@ -330,12 +334,13 @@ abstract class MainActivityTaskTester : MainActivityTester() {
             selectTaskByName(origName)
             with(composeRule) {
                 onNode(hasAnyAncestor(isDetailsCard()) and isButton(R.string.cmd_edit_task)).performClick()
-                onNode(hasAnyAncestor(isDialog()) and hasContentDescriptionExactly(getString(R.string.lbl_name))).run {
+                val inDialog = hasAnyAncestor(isDialog(R.string.ttl_edit_task))
+                onNode(inDialog and hasContentDescriptionExactly(getString(R.string.lbl_name))).run {
                     performTextClearance()
                     performTextInput("   name  ")
                 }
-                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_save)).performClick()
-                onNode(isDialog()).assertIsNotDisplayed()
+                onNode(inDialog and isButton(R.string.cmd_save)).performClick()
+                onNode(isDialog(R.string.ttl_edit_task)).assertIsNotDisplayed()
                 waitForIdle()
             }
             val tasks = TaskRepository.instance.tasks.value!!
@@ -354,10 +359,11 @@ abstract class MainActivityTaskTester : MainActivityTester() {
             selectTaskByName(origName)
             with(composeRule) {
                 onNode(hasAnyAncestor(isDetailsCard()) and isButton(R.string.cmd_edit_task)).performClick()
-                onNode(hasAnyAncestor(isDialog()) and hasContentDescriptionExactly(getString(R.string.lbl_name))).run {
+                val inDialog = hasAnyAncestor(isDialog(R.string.ttl_edit_task))
+                onNode(inDialog and hasContentDescriptionExactly(getString(R.string.lbl_name))).run {
                     performTextClearance()
                 }
-                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_save)).performClick()
+                onNode(inDialog and isButton(R.string.cmd_save)).performClick()
                 getTaskItemByName(origName).assertExists()
                 waitForIdle()
             }
@@ -374,7 +380,7 @@ abstract class MainActivityTaskTester : MainActivityTester() {
             TaskRepository.instance.newTask(taskName).id
         }
         inActivity {
-            getTaskItemByName(taskName).performTouchInput { swipeRight() }
+            getTaskItemByName(taskName).performTouchInput { swipeRight(startX = centerX) }
             composeRule.waitForIdle()
             assertEquals(
                 Day.today() as Day?,

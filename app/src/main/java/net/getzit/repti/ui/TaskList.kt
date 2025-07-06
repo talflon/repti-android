@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
@@ -22,12 +23,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Done
+import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -50,12 +54,21 @@ import net.getzit.repti.Day
 import net.getzit.repti.R
 import net.getzit.repti.Task
 import net.getzit.repti.TaskId
+import net.getzit.repti.TaskRepository
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.ReorderableLazyListState
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskList(modifier: Modifier = Modifier, tasks: List<Task>) {
     var selectedTaskId: TaskId? by rememberSaveable { mutableStateOf(null) }
     val listState = rememberLazyListState()
+    val reorderableListState = rememberReorderableLazyListState(listState) { from, to ->
+        TaskRepository.instance.editDataset { dataset ->
+            dataset.moveTaskBefore(from.key as TaskId, to.key as TaskId?)
+        }
+    }
 
     if (selectedTaskId != null && tasks.none { it.id == selectedTaskId }) {
         selectedTaskId = null
@@ -67,10 +80,11 @@ fun TaskList(modifier: Modifier = Modifier, tasks: List<Task>) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues.Absolute(left = 8.dp, right = 8.dp),
         ) {
-            items(items = tasks, key = { it.id.string }) { task ->
+            items(items = tasks, key = { it.id }) { task ->
                 TaskListItem(
                     task = task,
                     selected = task.id == selectedTaskId,
+                    reorderableListState = reorderableListState,
                     onClick = { selectedTaskId = task.id })
             }
         }
@@ -109,9 +123,10 @@ fun TaskList(modifier: Modifier = Modifier, tasks: List<Task>) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskListItem(
+fun LazyItemScope.TaskListItem(
     task: Task,
     selected: Boolean,
+    reorderableListState: ReorderableLazyListState,
     onClick: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -123,46 +138,55 @@ fun TaskListItem(
         }
     }
 
-    SwipeToDismissBox(
-        state = swipeState,
-        enableDismissFromEndToStart = false,
-        backgroundContent = { Box(Modifier.fillMaxSize().background(colorScheme.background)) }
-    ) {
-        Box(
-            Modifier
-                .defaultMinSize(minHeight = 24.dp)
-                .padding(4.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(if (selected) colorScheme.secondary else colorScheme.secondaryContainer)
+    ReorderableItem(reorderableListState, key = task.id) { isDragging ->
+        SwipeToDismissBox(
+            state = swipeState,
+            enableDismissFromEndToStart = false,
+            backgroundContent = { Box(Modifier.fillMaxSize().background(colorScheme.background)) }
         ) {
-            Row(
-                Modifier
-                    .padding(4.dp)
-                    .selectable(
-                        selected = selected,
-                        onClick = onClick,
-                    ),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Surface(
+                modifier = Modifier
+                    .defaultMinSize(minHeight = 24.dp)
+                    .padding(4.dp),
+                color = if (selected) colorScheme.secondary else colorScheme.secondaryContainer,
+                shape = RoundedCornerShape(8.dp),
+                shadowElevation = if (isDragging) 4.dp else 0.dp,
             ) {
-                Text(
-                    text = task.name,
-                    style = typography.headlineMedium,
-                    modifier = Modifier.weight(1f)
-                )
-                if (task.done != null) {
-                    Spacer(Modifier.width(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = formatDoneDaysAgo(task.done),
-                            style = typography.labelLarge
-                        )
-                        Spacer(Modifier.width(4.dp))
+                Row(
+                    Modifier
+                        .padding(4.dp)
+                        .selectable(
+                            selected = selected,
+                            onClick = onClick,
+                        ),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(modifier = Modifier.draggableHandle(), onClick = {}) {
                         Icon(
-                            Icons.Rounded.Done,
-                            stringResource(R.string.lbl_done),
-                            tint = colorScheme.primary
+                            Icons.Rounded.DragHandle,
+                            contentDescription = stringResource(R.string.cmd_drag),
                         )
+                    }
+                    Text(
+                        text = task.name,
+                        style = typography.headlineMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (task.done != null) {
+                        Spacer(Modifier.width(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = formatDoneDaysAgo(task.done),
+                                style = typography.labelLarge
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Icon(
+                                Icons.Rounded.Done,
+                                stringResource(R.string.lbl_done),
+                                tint = colorScheme.primary
+                            )
+                        }
                     }
                 }
             }
@@ -175,7 +199,17 @@ fun TaskListItem(
 fun PreviewTaskListItem(
     @PreviewParameter(TaskPreviewParameterProvider::class) task: Task,
 ) {
-    TaskListItem(task = task, selected = false, onClick = {})
+    val listState = rememberLazyListState()
+    val reorderableListState = rememberReorderableLazyListState(listState) { _, _ -> }
+    LazyColumn {
+        item {
+            TaskListItem(
+                task = task,
+                selected = false,
+                reorderableListState = reorderableListState,
+                onClick = {})
+        }
+    }
 }
 
 

@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -126,7 +127,9 @@ fun TaskDetailSheet(
     }
 
     if (openDeleteDialog) {
+        val dialogPaneTitle = stringResource(R.string.ttl_delete_task)
         AlertDialog(
+            modifier = Modifier.semantics { paneTitle = dialogPaneTitle },
             icon = {
                 Icon(
                     Icons.Rounded.Delete,
@@ -260,8 +263,11 @@ fun EditTaskNameDialog(
     val newTaskNameState = rememberSaveable { mutableStateOf(oldName) }
 
     Dialog(onDismissRequest = onDismissRequest) {
+        val dialogPaneTitle = stringResource(R.string.ttl_edit_task)
         Card(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .padding(16.dp)
+                .semantics { paneTitle = dialogPaneTitle },
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -308,8 +314,10 @@ fun EditDayDialog(
     onConfirmRequest: (Day) -> Unit
 ) {
     val datePickerState = rememberDatePickerState(oldDay.millis)
+    val dialogPaneTitle = stringResource(R.string.ttl_edit_day)
 
     DatePickerDialog(
+        modifier = Modifier.semantics { paneTitle = dialogPaneTitle },
         onDismissRequest = onDismissRequest,
         confirmButton = {
             Button(onClick = {

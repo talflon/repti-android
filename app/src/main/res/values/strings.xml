@@ -50,7 +50,13 @@ SPDX-License-Identifier: GPL-3.0-or-later
     <string name="cmd_show_about">About Repti</string>
     <string name="title_about">About Repti</string>
     <string name="cmd_back">Back</string>
+    <string name="cmd_drag">Drag position</string>
     <string name="lbl_version">Version</string>
     <string name="msg_copyright_notice">Copyright © 2024 Daniel Getz</string>
     <string name="msg_about_licenses">Licensed under the GPL v3, and includes the following libraries with licenses as noted:</string>
+    <string name="ttl_new_task">New task dialog</string>
+    <string name="ttl_load_backup">Load backup dialog</string>
+    <string name="ttl_edit_task">Edit task dialog</string>
+    <string name="ttl_edit_day">Edit day dialog</string>
+    <string name="ttl_delete_task">Delete task dialog</string>
 </resources>

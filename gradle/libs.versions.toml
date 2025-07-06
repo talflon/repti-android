@@ -6,11 +6,11 @@
 androidGradlePlugin = "8.8.0"
 kotlin = "2.1.0"
 dokka = "1.9.10"
-composeBom = "2024.08.00"
-compose_ui = "1.6.8"
-compose_material3 = "1.2.1"
-activityCompose = "1.9.1"
-appcompat = "1.7.0"
+composeBom = "2025.06.01"
+compose_ui = "1.7.8"
+compose_material3 = "1.3.2"
+activityCompose = "1.10.1"
+appcompat = "1.7.1"
 desugar_jdk_libs = "2.1.4"
 espresso = "3.6.1"
 jsonassert = "1.5.1"
@@ -21,10 +21,11 @@ kotlinxCoroutinesTest = "1.10.1"
 kotlinxSerializationJson = "1.8.0"
 ktx = "1.15.0"
 material = "1.12.0"
-robolectric = "4.14.1"
+robolectric = "4.15.1"
 about_libraries = "11.2.3"
-lifecycle = "2.8.7"
+lifecycle = "2.9.1"
 kover = "0.9.1"
+reorderable = "2.5.1"
 
 [libraries]
 dokka-android = { module = "org.jetbrains.dokka:android-documentation-plugin", version.ref = "dokka" }
@@ -34,6 +35,7 @@ compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview"
 compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "compose_ui" }
 compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "compose_ui" }
 compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "compose_ui" }
+compose-material-icons = { module = "androidx.compose.material:material-icons-extended-android", version.ref = "compose_ui" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espresso" }
@@ -51,6 +53,7 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 android-material = { module = "com.google.android.material:material", version.ref = "material" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 about-libraries-compose-m3 = { module = "com.mikepenz:aboutlibraries-compose-m3", version.ref = "about_libraries" }
+reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 
 [bundles]
 

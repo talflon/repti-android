@@ -6,6 +6,7 @@ package net.getzit.repti
 
 import android.content.Context
 import androidx.annotation.StringRes
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertAny
@@ -17,6 +18,7 @@ import androidx.compose.ui.test.hasAnyChild
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescriptionExactly
 import androidx.compose.ui.test.hasTextExactly
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onChildren
@@ -46,6 +48,13 @@ abstract class MainActivityTester {
     protected fun isButton(@StringRes id: Int): SemanticsMatcher {
         val cmd = getString(id)
         return hasClickAction() and (hasContentDescriptionExactly(cmd) or hasTextExactly(cmd))
+    }
+
+    protected fun isDialog(@StringRes paneTitleId: Int): SemanticsMatcher {
+        val paneTitle = getString(paneTitleId)
+        return isDialog() and hasAnyChild(
+            SemanticsMatcher.expectValue(SemanticsProperties.PaneTitle, paneTitle)
+        )
     }
 
     protected fun isInMenu() =

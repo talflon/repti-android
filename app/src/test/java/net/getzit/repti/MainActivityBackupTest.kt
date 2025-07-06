@@ -10,7 +10,6 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.hasAnyAncestor
-import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.performClick
 import androidx.test.espresso.intent.Intents.intended
 import androidx.test.espresso.intent.Intents.intending
@@ -97,8 +96,8 @@ class MainActivityBackupTest : MainActivityTester() {
                 onNode(isButton(R.string.cmd_menu)).performClick()
                 onNode(isButton(R.string.cmd_load_backup) and isInMenu()).performClick()
                 intended(isLoadBackupAction())
-                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_synchronize)).performClick()
-                onNode(isDialog()).assertIsNotDisplayed()
+                onNode(hasAnyAncestor(isDialog(R.string.ttl_load_backup)) and isButton(R.string.cmd_synchronize)).performClick()
+                onNode(isDialog(R.string.ttl_load_backup)).assertIsNotDisplayed()
             }
             TaskRepository.instance.tasks.value?.sortedBy { it.id.string }
             assertThat(TaskRepository.instance.tasks.value, containsInAnyOrder(oldTask, newTask))
@@ -130,8 +129,8 @@ class MainActivityBackupTest : MainActivityTester() {
                 onNode(isButton(R.string.cmd_menu)).performClick()
                 onNode(isButton(R.string.cmd_load_backup) and isInMenu()).performClick()
                 intended(isLoadBackupAction())
-                onNode(hasAnyAncestor(isDialog()) and isButton(R.string.cmd_replace)).performClick()
-                onNode(isDialog()).assertIsNotDisplayed()
+                onNode(hasAnyAncestor(isDialog(R.string.ttl_load_backup)) and isButton(R.string.cmd_replace)).performClick()
+                onNode(isDialog(R.string.ttl_load_backup)).assertIsNotDisplayed()
             }
             TaskRepository.instance.tasks.value?.sortedBy { it.id.string }
             assertEquals(listOf(newTask), TaskRepository.instance.tasks.value)

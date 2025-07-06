@@ -46,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -196,8 +197,11 @@ fun NewTaskDialog(onDismissRequest: () -> Unit, onConfirmRequest: (String) -> Un
     val newTaskNameState = rememberSaveable { mutableStateOf("") }
 
     Dialog(onDismissRequest = onDismissRequest) {
+        val dialogPaneTitle = stringResource(R.string.ttl_new_task)
         Card(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .padding(16.dp)
+                .semantics { paneTitle = dialogPaneTitle },
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
