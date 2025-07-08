@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 // SPDX-FileCopyrightText: 2024 Daniel Getz <dan@getzit.net>
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
@@ -43,8 +45,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_1_8
         isCoreLibraryDesugaringEnabled = true
     }
-    kotlinOptions {
-        jvmTarget = "1.8"
+    kotlin {
+        compilerOptions {
+            jvmTarget = JvmTarget.fromTarget("1.8")
+        }
     }
 
     buildFeatures {
@@ -52,7 +56,6 @@ android {
         buildConfig = true
     }
 
-    @Suppress("UnstableApiUsage")
     testOptions {
         unitTests {
             isIncludeAndroidResources = true

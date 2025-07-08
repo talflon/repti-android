@@ -3,26 +3,27 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 [versions]
-androidGradlePlugin = "8.8.0"
-kotlin = "2.1.0"
-dokka = "1.9.10"
+androidGradlePlugin = "8.11.0"
+kotlin = "2.2.0"
+dokka = "2.0.0"
 composeBom = "2025.06.01"
-compose_ui = "1.7.8"
+compose_ui = "1.8.3"
+compose_icons = "1.7.8"
 compose_material3 = "1.3.2"
 activityCompose = "1.10.1"
 appcompat = "1.7.1"
-desugar_jdk_libs = "2.1.4"
+desugar_jdk_libs = "2.1.5"
 espresso = "3.6.1"
-jsonassert = "1.5.1"
+jsonassert = "1.5.3"
 junit = "4.13.2"
 androidxJunit = "1.2.1"
 kotestProperty = "5.9.1"
-kotlinxCoroutinesTest = "1.10.1"
-kotlinxSerializationJson = "1.8.0"
-ktx = "1.15.0"
+kotlinxCoroutinesTest = "1.10.2"
+kotlinxSerializationJson = "1.9.0"
+ktx = "1.16.0"
 material = "1.12.0"
 robolectric = "4.15.1"
-about_libraries = "11.2.3"
+about_libraries = "12.2.4"
 lifecycle = "2.9.1"
 kover = "0.9.1"
 reorderable = "2.5.1"
@@ -35,7 +36,7 @@ compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview"
 compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "compose_ui" }
 compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest", version.ref = "compose_ui" }
 compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4", version.ref = "compose_ui" }
-compose-material-icons = { module = "androidx.compose.material:material-icons-extended-android", version.ref = "compose_ui" }
+compose-material-icons = { module = "androidx.compose.material:material-icons-extended-android", version.ref = "compose_icons" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espresso" }

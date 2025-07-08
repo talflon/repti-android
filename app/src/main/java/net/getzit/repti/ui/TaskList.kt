@@ -121,7 +121,6 @@ fun TaskList(modifier: Modifier = Modifier, tasks: List<Task>) {
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LazyItemScope.TaskListItem(
     task: Task,
