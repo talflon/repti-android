@@ -29,7 +29,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
-import androidx.test.espresso.IdlingRegistry
 import androidx.test.espresso.idling.CountingIdlingResource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -54,9 +53,7 @@ fun formatDoneWhen(day: Day?): String =
         }
     }
 
-val idlingResource = CountingIdlingResource("MainActivity", true).also {
-    IdlingRegistry.getInstance().register(it)
-}
+val idlingResource = CountingIdlingResource("MainActivity", true)
 
 inline fun CoroutineScope.launchIdling(crossinline block: suspend CoroutineScope.() -> Unit): Job {
     idlingResource.increment()

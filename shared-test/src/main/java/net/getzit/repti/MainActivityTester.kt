@@ -25,6 +25,9 @@ import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.espresso.IdlingRegistry
+import net.getzit.repti.ui.idlingResource
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 
@@ -43,6 +46,16 @@ abstract class MainActivityTester {
     @Before
     fun clearTasks() {
         TaskRepository.instance = TaskRepository.create(VarStorage(""))
+    }
+
+    @Before
+    fun registerIdlingResource() {
+        IdlingRegistry.getInstance().register(idlingResource)
+    }
+
+    @After
+    fun unregisterIdlingResource() {
+        IdlingRegistry.getInstance().unregister(idlingResource)
     }
 
     protected fun isButton(@StringRes id: Int): SemanticsMatcher {
