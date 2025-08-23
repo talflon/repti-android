@@ -389,7 +389,7 @@ class Dataset {
         this.deleted.clear()
     }
 
-    override fun toString(): String = Json.encodeToString(this)
+    override fun toString(): String = defaultJson.encodeToString(this)
 
     internal fun requireValid() {
         require(tasks.size == updates.size)
@@ -412,8 +412,10 @@ class Dataset {
     }
 
     companion object {
+        val defaultJson = Json { explicitNulls = false }
+
         fun fromString(s: String): Dataset =
-            Json.decodeFromString<Dataset>(s).also { it.requireValid() }
+            defaultJson.decodeFromString<Dataset>(s).also { it.requireValid() }
     }
 }
 

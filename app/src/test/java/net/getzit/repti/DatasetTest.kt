@@ -325,8 +325,14 @@ class DatasetTest {
             checkAll(datasetArb(Arb.string())) { dataset ->
                 assertDatasetsEqual(dataset, Json.decodeFromString(Json.encodeToString(dataset)))
                 assertDatasetsEqual(dataset, Dataset.fromString(dataset.toString()))
+                assertDatasetsEqual(dataset, Dataset.fromString(Json.encodeToString(dataset)))
             }
         }
+    }
+
+    @Test
+    fun testDatasetJsonDecodeEmpty() {
+        assertDatasetsEqual(Dataset(), Dataset.fromString("{}"))
     }
 
     @Test
