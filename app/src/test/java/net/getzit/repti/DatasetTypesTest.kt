@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Daniel Getz <dan@getzit.net>
+// SPDX-FileCopyrightText: 2024-2025 Daniel Getz <dan@getzit.net>
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -11,9 +11,10 @@ import io.kotest.property.Arb
 import io.kotest.property.arbitrary.int
 import io.kotest.property.arbitrary.localDate
 import io.kotest.property.arbitrary.localDateTime
+import io.kotest.property.arbitrary.long
 import io.kotest.property.arbitrary.map
+import io.kotest.property.arbitrary.withEdgecases
 import io.kotest.property.checkAll
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -32,10 +33,20 @@ class DatasetTypesTest {
 
     private val instantArb = ldtArb.map { it.toInstant(ZoneOffset.UTC) }
 
+    private val dayArb =
+        Arb.long(-365L * 100, 365L * 1000)
+            .withEdgecases(0L, Int.MAX_VALUE + 1L)
+            .map(::Day)
+
+    private val timestampArb =
+        Arb.long(-365L * 100 * 24 * 60 * 60, 365L * 1000 * 24 * 60 * 60)
+            .withEdgecases(0L, Int.MAX_VALUE + 1L)
+            .map(::Timestamp)
+
     @Test
     fun testTimestampOfAsInstant() {
         runBlocking {
-            checkAll<Timestamp> { t ->
+            checkAll(timestampArb) { t ->
                 assertEquals(t, Timestamp.of(t.asInstant))
             }
         }
@@ -53,7 +64,7 @@ class DatasetTypesTest {
     @Test
     fun testDayOfDate() {
         runBlocking {
-            checkAll<Day> { day ->
+            checkAll(dayArb) { day ->
                 assertEquals(day, Day.of(day.date))
             }
         }
@@ -71,7 +82,7 @@ class DatasetTypesTest {
     @Test
     fun testToFromMillis() {
         runBlocking {
-            checkAll<Day> { day ->
+            checkAll(dayArb) { day ->
                 assertEquals(day, Day.fromMillis(day.millis))
             }
         }
@@ -106,14 +117,14 @@ class DatasetTypesTest {
     @Test
     fun testDatePlusAfter(): Unit = runBlocking {
         checkAll(localDateArb.map(Day::of), Arb.int(-10_000, 10_000)) { day, delta ->
-            assertEquals(delta, day.plusDays(delta).daysAfter(day))
+            assertEquals(delta.toLong(), day.plusDays(delta).daysAfter(day))
         }
     }
 
     @Test
     fun testDateMinusAfter(): Unit = runBlocking {
         checkAll(localDateArb.map(Day::of), Arb.int(-10_000, 10_000)) { day, delta ->
-            assertEquals(delta, day.daysAfter(day.minusDays(delta)))
+            assertEquals(delta.toLong(), day.daysAfter(day.minusDays(delta)))
         }
     }
 

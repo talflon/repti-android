@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Daniel Getz <dan@getzit.net>
+// SPDX-FileCopyrightText: 2024-2025 Daniel Getz <dan@getzit.net>
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -47,8 +47,8 @@ fun formatDoneWhen(day: Day?): String =
         stringResource(R.string.lbl_not_done)
     } else {
         when (val daysAgo = Day.today().daysAfter(day)) {
-            0 -> stringResource(R.string.lbl_today)
-            1 -> stringResource(R.string.lbl_yesterday)
+            0L -> stringResource(R.string.lbl_today)
+            1L -> stringResource(R.string.lbl_yesterday)
             else -> stringResource(R.string.lbl_days_ago, daysAgo)
         }
     }

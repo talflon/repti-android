@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Daniel Getz <dan@getzit.net>
+// SPDX-FileCopyrightText: 2024-2025 Daniel Getz <dan@getzit.net>
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -213,4 +213,4 @@ fun PreviewTaskListItem(
 
 
 fun formatDoneDaysAgo(day: Day): String =
-    Day.today().daysAfter(day).let { if (it == 0) "" else it.toString() }
+    Day.today().daysAfter(day).let { if (it == 0L) "" else it.toString() }

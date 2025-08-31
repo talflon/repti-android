@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2024 Daniel Getz <dan@getzit.net>
+// SPDX-FileCopyrightText: 2024-2025 Daniel Getz <dan@getzit.net>
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -15,7 +15,6 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
-import java.lang.Math.toIntExact
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -473,30 +472,25 @@ class TaskIdAsStringSerializer : KSerializer<TaskId> {
  */
 @Serializable
 @JvmInline
-value class Timestamp internal constructor(private val epochSecs: Int) : Comparable<Timestamp> {
-    val asInstant: Instant get() = Instant.ofEpochSecond(epochSecs + EPOCH)
+value class Timestamp internal constructor(private val epochSecs: Long) : Comparable<Timestamp> {
+    val asInstant: Instant get() = Instant.ofEpochSecond(epochSecs)
 
     override fun compareTo(other: Timestamp) = epochSecs.compareTo(other.epochSecs)
 
     companion object {
-        /**
-         * 2021-01-01, in seconds since the regular epoch (1970-01-01)
-         */
-        const val EPOCH: Long = Day.EPOCH * 86400L
-
         fun now(clock: Clock = Clock.systemDefaultZone()) = of(Instant.now(clock))
 
-        fun of(instant: Instant) = Timestamp(toIntExact(instant.epochSecond - EPOCH))
+        fun of(instant: Instant) = Timestamp(instant.epochSecond)
     }
 }
 
 /**
- * Stores a date as the number of days since 2021-01-01.
+ * Stores a date as the number of days since the epoch.
  */
 @Serializable
 @JvmInline
-value class Day internal constructor(private val epochDays: Int) : Comparable<Day> {
-    val date: LocalDate get() = LocalDate.ofEpochDay(epochDays + EPOCH)
+value class Day internal constructor(private val epochDays: Long) : Comparable<Day> {
+    val date: LocalDate get() = LocalDate.ofEpochDay(epochDays)
 
     override fun compareTo(other: Day) = epochDays.compareTo(other.epochDays)
 
@@ -504,23 +498,18 @@ value class Day internal constructor(private val epochDays: Int) : Comparable<Da
 
     fun minusDays(days: Int) = Day(epochDays - days)
 
-    fun daysAfter(day: Day): Int = this.epochDays - day.epochDays
+    fun daysAfter(day: Day): Long = this.epochDays - day.epochDays
 
-    val millis: Long get() = (epochDays + EPOCH) * MILLIS_IN_DAY
+    val millis: Long get() = epochDays * MILLIS_IN_DAY
 
     companion object {
-        /**
-         * 2021-01-01, in days since the regular epoch (1970-01-01)
-         */
-        const val EPOCH: Long = 18628
-
         private const val MILLIS_IN_DAY: Long = 86_400_000
 
         fun today(clock: Clock = Clock.systemDefaultZone()) = of(LocalDate.now(clock))
 
-        fun of(date: LocalDate) = Day(toIntExact(date.toEpochDay() - EPOCH))
+        fun of(date: LocalDate) = Day(date.toEpochDay())
 
-        fun fromMillis(millis: Long) = Day(toIntExact((millis / MILLIS_IN_DAY - EPOCH)))
+        fun fromMillis(millis: Long) = Day(millis / MILLIS_IN_DAY)
     }
 }
 
